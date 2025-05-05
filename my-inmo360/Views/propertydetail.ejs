@@ -1,0 +1,148 @@
+<%- include('partials/header') %>
+<link rel="stylesheet" href="/css/propertydetail.css">
+
+<div class="property-detail-container">
+  <div class="detail-main">
+    <!-- Slider Column -->
+    <div class="slider-container">
+      <% if (images && images.length) { %>
+        <div class="slider">
+          <% images.forEach((url, idx) => { %>
+            <div class="slide <%= idx === 0 ? 'active' : '' %>">
+              <img src="<%= url %>" alt="Imagen <%= idx + 1 %>">
+            </div>
+          <% }) %>
+        </div>
+        <button class="slider-btn prev">&lt;</button>
+        <button class="slider-btn next">&gt;</button>
+        <div class="slide-count">1 / <%= images.length %></div>
+      <% } else { %>
+        <p>No hay imágenes disponibles</p>
+      <% } %>
+    </div>
+
+    <!-- Contact Panel -->
+    <aside class="contact-panel">
+      <h2>Contactar al anunciante</h2>
+      <div class="contact-info">
+        <img src="<%= agent.profile_pic %>" alt="Perfil">
+        <div class="agent-details">
+          <h3><%= agent.name %></h3>
+          <p><%= agent.dept %>, <%= agent.city %></p>
+        </div>
+      </div>
+      <p class="agency-info">
+        <%= agent.belongsToAgency
+            ? 'Pertenece a ' + agent.agency
+            : 'No pertenece a ninguna inmobiliaria' %>
+      </p>
+      <button class="btn outline" id="showPhone">Ver número de teléfono</button>
+      <button class="btn outline" id="whatsappBtn">Enviar WhatsApp</button>
+      <button class="btn outline" id="showEmail">Ver correo electrónico</button>
+    </aside>
+  </div>
+
+  <!-- Video / Plano -->
+  <div class="detail-actions">
+    <button class="btn primary" id="showVideo">Ver video</button>
+    <button class="btn primary" id="showPlano">Ver plano</button>
+  </div>
+
+  <!-- Description & Features -->
+  <div class="detail-content">
+    <section class="description-section">
+      <h1><%= property.titulo %></h1>
+      <p class="location"><%= property.departamento %>, <%= property.municipio %>, <%= property.zona %></p>
+      <p class="price">
+        Q<%= Number(property.precio).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %>
+      </p>
+      <p class="property-description"><%- property.descripcion.replace(/\n/g, '<br>') %></p>
+    </section>
+
+    <aside class="info-box">
+      <h3>Características</h3>
+      <ul>
+        <% if (property.tipo_propiedad === 'casa' || property.tipo_propiedad === 'apartamento') { %>
+          <% if (property.habitaciones) { %><li>🏠 <%= property.habitaciones %> habitaciones</li><% } %>
+          <% if (property.banos) { %><li>🛁 <%= property.banos %> baños</li><% } %>
+          <% if (property.m2_construccion) { %><li>📐 <%= property.m2_construccion %> m² construcción</li><% } %>
+          <% if (property.m2_terreno) { %><li>🌳 <%= property.m2_terreno %> m² terreno</li><% } %>
+          <% if (property.luxo) { %><li>✨ Propiedad de lujo</li><% } %>
+
+        <% } else if (property.tipo_propiedad === 'terreno') { %>
+          <% if (property.tamano_terreno) { %><li>🌳 <%= property.tamano_terreno %> m² terreno</li><% } %>
+          <% if (property.metros_frente) { %><li>📏 <%= property.metros_frente %> m frente</li><% } %>
+
+        <% } else if (property.tipo_propiedad === 'bodega') { %>
+          <% if (property.bodega_tamano) { %><li>🏢 <%= property.bodega_tamano %> m² de bodega</li><% } %>
+          <% if (property.bodega_altura) { %><li>↕ Altura: <%= property.bodega_altura %> m</li><% } %>
+          <% if (property.cantidad_oficinas) { %><li>🧑‍💼 <%= property.cantidad_oficinas %> oficina(s)</li><% } %>
+          <% if (property.cantidad_banos) { %><li>🚽 <%= property.cantidad_banos %> baño(s)</li><% } %>
+
+        <% } else if (property.tipo_propiedad === 'local comercial') { %>
+          <% if (property.local_tamano) { %><li>🏬 <%= property.local_tamano %> m² de local</li><% } %>
+          <% if (property.cantidad_banos) { %><li>🚽 <%= property.cantidad_banos %> baño(s)</li><% } %>
+        <% } %>
+      </ul>
+    </aside>
+  </div>
+</div>
+
+<script>
+  // Slider JS
+  const slides = document.querySelectorAll('.slide');
+  let current = 0;
+  document.querySelector('.next').onclick = () => {
+    slides[current].classList.remove('active');
+    current = (current + 1) % slides.length;
+    slides[current].classList.add('active');
+    document.querySelector('.slide-count').textContent = (current + 1) + ' / ' + slides.length;
+  };
+  document.querySelector('.prev').onclick = () => {
+    slides[current].classList.remove('active');
+    current = (current - 1 + slides.length) % slides.length;
+    slides[current].classList.add('active');
+    document.querySelector('.slide-count').textContent = (current + 1) + ' / ' + slides.length;
+  };
+
+  // Contact buttons
+  document.getElementById('showPhone').onclick = function() {
+    this.textContent = '<%= agent.phone %>';
+  };
+  document.getElementById('showEmail').onclick = function() {
+    this.textContent = '<%= agent.email %>';
+  };
+  document.getElementById('whatsappBtn').onclick = function() {
+    window.open('https://wa.me/<%= agent.phone.replace(/\\D/g, '') %>');
+  };
+
+  const propiedadId = <%= property.id %>;
+
+  document.getElementById('showPhone').addEventListener('click', () => {
+    fetch(`/track/phone/${propiedadId}`, { method: 'POST' });
+  });
+
+  document.getElementById('showEmail').addEventListener('click', () => {
+    fetch(`/track/email/${propiedadId}`, { method: 'POST' });
+  });
+
+  document.getElementById('whatsappBtn').addEventListener('click', () => {
+    fetch(`/track/whatsapp/${propiedadId}`, { method: 'POST' });
+  });
+
+  // Video / Plano
+  document.getElementById('showVideo').onclick = function() {
+    <% if (videoUrl) { %>
+      window.open('<%= videoUrl %>', '_blank');
+    <% } else { %>
+      alert('El anunciante no subió un video.');
+    <% } %>
+  };
+  document.getElementById('showPlano').onclick = function() {
+    <% if (planoUrl) { %>
+      window.open('<%= planoUrl %>', '_blank');
+    <% } else { %>
+      alert('El anunciante no subió plano.');
+    <% } %>
+  };
+</script>

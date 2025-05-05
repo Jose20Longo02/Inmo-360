@@ -1,0 +1,98 @@
+
+/* Reset */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: Arial, sans-serif;
+}
+
+body {
+  background: url('../images/landscape-antigua.JPG') no-repeat center center fixed;
+  background-size: cover;
+  position: relative;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: -1;
+}
+
+.dashboard-container {
+  max-width: 1000px;
+  margin: 2rem auto;
+  padding: 2rem;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+}
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.dashboard-header h1 {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #000;
+  text-align: left;
+}
+
+.dashboard-header a {
+  font-size: 0.95rem;
+  text-decoration: none;
+  color: #333;
+  font-weight: bold;
+}
+
+.dashboard-header a:hover {
+  color: #75FBD3;
+  text-decoration: none;
+}
+
+.dashboard-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.5rem;
+  justify-items: start;
+}
+
+.dashboard-card {
+  background-color: #fff;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  padding: 1.2rem;
+  width: 100%;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  text-decoration: none;
+  color: #000;
+}
+
+.dashboard-card:hover {
+  background-color: #75FBD3;
+  color: #000;
+}
+
+.dashboard-card h2 {
+  font-size: 1.2rem;
+  margin-bottom: 0.3rem;
+  text-decoration: none;
+}
+
+.dashboard-card p {
+  font-size: 0.9rem;
+  color: #333;
+  text-decoration: none;
+}

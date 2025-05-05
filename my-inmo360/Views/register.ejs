@@ -1,0 +1,362 @@
+<%- include('partials/header') %>
+<head>
+  <link rel="stylesheet" href="/css/register.css" />
+  <link rel="stylesheet" href="/css/header.css" />
+</head>
+
+
+
+<div class="register-page">
+  <!-- Si prefieres usar un div extra para el overlay, descomenta la siguiente línea y comenta el pseudo-elemento en CSS -->
+  <!-- <div class="overlay"></div> -->
+  <div class="register-container">
+    <h2 class="register-title">Regístrate</h2>
+    <form id="registrationForm" action="/register" method="POST" enctype="multipart/form-data">
+      
+      <!-- Paso 1: Datos de Cuenta -->
+      <div class="step" id="step-1">
+        <h3 class="step-title">Crear Cuenta</h3>
+        <div class="input-group">
+          <label for="username">Nombre de Usuario</label>
+          <input type="text" name="username" id="username" placeholder="Tu nombre de usuario" required>
+          <div id="usernameFeedback" class="feedback"></div>
+        </div>
+        <div class="input-group">
+          <label for="email">Correo Electrónico</label>
+          <input type="email" name="email" id="email" placeholder="tu@correo.com" required>
+          <div id="emailFeedback" class="feedback"></div>
+        </div>
+        <div class="input-group">
+          <label for="password">Contraseña</label>
+          <input type="password" name="password" id="password" required>
+        </div>
+        <div class="step-buttons">
+          <button type="button" class="btn next-btn" id="step1Next" disabled>Siguiente</button>
+        </div>
+      </div>
+      
+      <!-- Paso 2: Información de Perfil -->
+      <div class="step" id="step-2" style="display: none;">
+        <h3 class="step-title">Información de Perfil</h3>
+        <div class="input-group">
+          <label for="profilePic">Foto de Perfil <span class="required">*</span></label>
+          <input type="file" name="profilePic" id="profilePic" accept="image/*" required>
+          <div id="preview-profilePic" class="preview-container"></div>
+        </div>
+        <div class="input-group">
+          <label for="dept">Departamento</label>
+          <select name="dept" id="dept" required>
+            <option value="">Seleccione Departamento</option>
+            <% departamentos.forEach(dep => { %>
+              <option value="<%= dep.nombre %>"><%= dep.nombre %></option>
+            <% }) %>
+          </select>
+        </div>
+        <div class="input-group">
+          <label for="city">Municipio/Ciudad</label>
+          <select name="city" id="city" required>
+            <option value="">Seleccione Municipio</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label for="address">Dirección de Residencia</label>
+          <input type="text" name="address" id="address" placeholder="Dirección completa" required>
+        </div>
+        <div class="input-group">
+          <label for="phone">Número de Teléfono (incluye extensión, ej. +502 12345678)</label>
+          <input type="text" name="phone" id="phone" placeholder="+502 12345678" required>
+        </div>
+        <!-- Campo DPI: opcional pero se destaca -->
+        <div class="input-group">
+          <label for="idFront">
+            Documento de Identificación (Frente)
+            <span class="optional-message">(opcional, al subirlo tu perfil se mostrará verificado)</span>
+          </label>
+          <input type="file" name="idFront" id="idFront" accept="image/*">
+          <div id="preview-idFront" class="preview-container"></div>
+        </div>
+        <div class="input-group">
+          <label for="idBack">
+            Documento de Identificación (Dorso)
+            <span class="optional-message">(opcional)</span>
+          </label>
+          <input type="file" name="idBack" id="idBack" accept="image/*">
+          <div id="preview-idBack" class="preview-container"></div>
+        </div>
+        <div class="step-buttons">
+          <button type="button" class="btn back-btn">Atrás</button>
+          <button type="button" class="btn next-btn" id="step2Next" disabled>Siguiente</button>
+        </div>
+      </div>
+      
+      <!-- Paso 3: Información de Inmobiliaria -->
+      <div class="step" id="step-3" style="display: none;">
+        <h3 class="step-title">Información de Inmobiliaria</h3>
+      
+        <!-- Flag para redirigir tras crear cuenta -->
+        <input type="hidden" name="redirectToAgency" id="redirectToAgency" value="false">
+      
+        <div class="input-group">
+          <label for="belongsToAgency">¿Perteneces a alguna inmobiliaria?</label>
+          <select name="belongsToAgency" id="belongsToAgency" required>
+            <option value="">Seleccione...</option>
+            <option value="no">No</option>
+            <option value="si">Sí</option>
+          </select>
+        </div>
+      
+        <div class="input-group" id="agency-info" style="display: none;">
+          <label for="agency">Selecciona tu Inmobiliaria</label>
+          <select name="agency" id="agency">
+            <option value="">Seleccione Inmobiliaria</option>
+            <% inmobiliarias.forEach(agency => { %>
+              <option value="<%= agency.id %>"><%= agency.nombre %></option>
+            <% }) %>
+          </select>
+          <a href="#" id="registerAgencyLink" class="agency-link">
+            ¿Tu inmobiliaria no aparece? Registra tu inmobiliaria aquí.
+          </a>
+        </div>
+      
+        <div class="step-buttons">
+          <button type="button" class="btn back-btn">Atrás</button>
+          <button type="submit" class="btn">Crear Cuenta</button>
+        </div>
+      </div>
+      
+    </form>
+  </div>
+</div>
+
+<!-- SCRIPT: Validación en tiempo real para Paso 1 -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const usernameInput = document.getElementById('username');
+  const emailInput = document.getElementById('email');
+  const passwordInput = document.getElementById('password');
+  const step1Next = document.getElementById('step1Next');
+  const usernameFeedback = document.getElementById('usernameFeedback');
+  const emailFeedback = document.getElementById('emailFeedback');
+  
+  function updateStep1Next() {
+    const username = usernameInput.value.trim();
+    const email = emailInput.value.trim();
+    const password = passwordInput.value.trim();
+    const usernameValid = usernameFeedback.textContent.trim() === 'Disponible';
+    const emailValid = emailFeedback.textContent.trim() === 'Disponible';
+    if(username && email && password && usernameValid && emailValid) {
+      step1Next.disabled = false;
+      step1Next.classList.remove('disabled');
+      step1Next.classList.add('enabled');
+    } else {
+      step1Next.disabled = true;
+      step1Next.classList.remove('enabled');
+      step1Next.classList.add('disabled');
+    }
+  }
+  
+  usernameInput.addEventListener('blur', function() {
+    const username = usernameInput.value.trim();
+    if(username) {
+      fetch('/check-username?username=' + encodeURIComponent(username))
+        .then(res => res.json())
+        .then(data => {
+          if(data.available) {
+            usernameFeedback.textContent = 'Disponible';
+            usernameFeedback.style.color = 'green';
+          } else {
+            usernameFeedback.textContent = 'Lo sentimos, este usuario ya está en uso';
+            usernameFeedback.style.color = 'red';
+          }
+          updateStep1Next();
+        })
+        .catch(err => console.error(err));
+    } else {
+      usernameFeedback.textContent = '';
+      updateStep1Next();
+    }
+  });
+  
+  emailInput.addEventListener('blur', function() {
+    const email = emailInput.value.trim();
+    if(email) {
+      fetch('/check-email?email=' + encodeURIComponent(email))
+        .then(res => res.json())
+        .then(data => {
+          if(data.available) {
+            emailFeedback.textContent = 'Disponible';
+            emailFeedback.style.color = 'green';
+          } else {
+            emailFeedback.textContent = 'Lo sentimos, este correo ya está registrado';
+            emailFeedback.style.color = 'red';
+          }
+          updateStep1Next();
+        })
+        .catch(err => console.error(err));
+    } else {
+      emailFeedback.textContent = '';
+      updateStep1Next();
+    }
+  });
+  
+  passwordInput.addEventListener('input', updateStep1Next);
+});
+</script>
+
+<!-- SCRIPT: Navegación por pasos y actualización de Municipio (Paso 2) -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  let currentStep = 1;
+  const totalSteps = 3;
+  
+  function showStep(step) {
+    for (let i = 1; i <= totalSteps; i++) {
+      document.getElementById('step-' + i).style.display = (i === step) ? 'block' : 'none';
+    }
+  }
+  
+  document.querySelectorAll('.next-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (currentStep < totalSteps) {
+        currentStep++;
+        showStep(currentStep);
+      }
+    });
+  });
+  
+  document.querySelectorAll('.back-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (currentStep > 1) {
+        currentStep--;
+        showStep(currentStep);
+      }
+    });
+  });
+  
+  // Actualización dinámica del Municipio en función del Departamento (Paso 2)
+  const deptSelect = document.getElementById('dept');
+  const citySelect = document.getElementById('city');
+  deptSelect.addEventListener('change', () => {
+    citySelect.innerHTML = '<option value="">Seleccione Municipio</option>';
+    if(deptSelect.value) {
+      const departamentosData = <%- JSON.stringify(departamentos) %>;
+      const dept = departamentosData.find(d => d.nombre === deptSelect.value);
+      if(dept && dept.municipios) {
+        dept.municipios.forEach(m => {
+          const option = document.createElement('option');
+          option.value = (typeof m === 'object' && m.nombre) ? m.nombre : m;
+          option.textContent = (typeof m === 'object' && m.nombre) ? m.nombre : m;
+          citySelect.appendChild(option);
+        });
+      }
+    }
+  });
+  
+  // Mostrar u ocultar sección de inmobiliaria (Paso 3)
+  const belongsToAgencySelect = document.getElementById('belongsToAgency');
+  const agencyInfoDiv = document.getElementById('agency-info');
+  belongsToAgencySelect.addEventListener('change', () => {
+    agencyInfoDiv.style.display = (belongsToAgencySelect.value === 'si') ? 'block' : 'none';
+  });
+  
+  // Validación en tiempo real para el Paso 2
+  const profilePicInput = document.getElementById('profilePic');
+  const addressInput = document.getElementById('address');
+  const phoneInput = document.getElementById('phone');
+  const step2Next = document.getElementById('step2Next');
+  
+  function validateStep2() {
+    if (
+      profilePicInput.files.length === 0 ||
+      deptSelect.value.trim() === "" ||
+      citySelect.value.trim() === "" ||
+      addressInput.value.trim() === "" ||
+      phoneInput.value.trim() === ""
+    ) {
+      step2Next.disabled = true;
+      step2Next.classList.add('disabled');
+      step2Next.classList.remove('enabled');
+    } else {
+      step2Next.disabled = false;
+      step2Next.classList.add('enabled');
+      step2Next.classList.remove('disabled');
+    }
+  }
+  
+  profilePicInput.addEventListener('change', validateStep2);
+  addressInput.addEventListener('input', validateStep2);
+  phoneInput.addEventListener('input', validateStep2);
+  deptSelect.addEventListener('change', validateStep2);
+  citySelect.addEventListener('change', validateStep2);
+  
+  // Validación inicial de Paso 2
+  validateStep2();
+  
+});
+</script>
+
+
+<!-- SCRIPT: (Paso 3) -->
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const belongsSelect      = document.getElementById('belongsToAgency');
+    const agencyDiv          = document.getElementById('agency-info');
+    const redirectInput      = document.getElementById('redirectToAgency');
+    const registerAgencyLink = document.getElementById('registerAgencyLink');
+  
+    // Mostrar u ocultar el dropdown de inmobiliarias
+    belongsSelect.addEventListener('change', () => {
+      agencyDiv.style.display = (belongsSelect.value === 'si') ? 'block' : 'none';
+    });
+  
+    // Si el usuario no encuentra su inmobiliaria y hace click en el enlace:
+    registerAgencyLink.addEventListener('click', e => {
+      e.preventDefault();
+      // Marcar “No” en belongsToAgency
+      belongsSelect.value = 'no';
+      agencyDiv.style.display = 'none';
+      // Activar flag para redirigir tras crear usuario
+      redirectInput.value = 'true';
+      // Enviar el formulario inmediatamente
+      document.getElementById('registrationForm').submit();
+    });
+  });
+  </script>
+
+<!-- SCRIPT: Vistas previas para imágenes -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  function previewFiles(input, previewContainerId) {
+    const previewContainer = document.getElementById(previewContainerId);
+    previewContainer.innerHTML = '';
+    if (input.files) {
+      Array.from(input.files).forEach(file => {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const img = document.createElement('img');
+          img.src = e.target.result;
+          img.className = 'preview-img';
+          previewContainer.appendChild(img);
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+  }
+  
+  document.getElementById('profilePic').addEventListener('change', function() {
+    previewFiles(this, 'preview-profilePic');
+  });
+  document.getElementById('idFront').addEventListener('change', function() {
+    previewFiles(this, 'preview-idFront');
+  });
+  document.getElementById('idBack').addEventListener('change', function() {
+    previewFiles(this, 'preview-idBack');
+  });
+});
+</script>
+
+
+
+
+
+<%- include('partials/footer') %>

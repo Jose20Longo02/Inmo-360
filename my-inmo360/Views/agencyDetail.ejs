@@ -1,0 +1,40 @@
+<%- include('partials/header') %>
+<head>
+  <link rel="stylesheet" href="/css/agencyDetail.css">
+  <link rel="stylesheet" href="/css/header.css">
+</head>
+
+<div class="agency-detail-container">
+  <h2>Mi Inmobiliaria: <%= agency.name %></h2>
+  <div class="agency-info">
+    <% if (agency.logo_url) { %>
+      <img src="<%= agency.logo_url %>" alt="Logo de <%= agency.name %>" class="agency-logo">
+    <% } %>
+    <p><strong>Estado:</strong> <%= agency.estado %></p>
+    <p><strong>Agentes:</strong> <%= agentsCount %></p>
+  </div>
+
+  <hr />
+
+  <section class="properties-section">
+    <h3>Propiedades de la inmobiliaria</h3>
+    <% if (properties.length) { %>
+      <ul class="properties-list">
+        <% properties.forEach(function(prop) { %>
+          <li>
+            <a href="/properties/<%= prop.id %>"><%= prop.titulo %></a>
+          </li>
+        <% }); %>
+      </ul>
+      <div class="pagination">
+        <% for (let i = 1; i <= Math.ceil(totalProps / limit); i++) { %>
+          <a href="/inmobiliaria/<%= agency.id %>?page=<%= i %>" class="page-link <%= page === i ? 'active' : '' %>"><%= i %></a>
+        <% } %>
+      </div>
+    <% } else { %>
+      <p>No hay propiedades registradas.</p>
+    <% } %>
+  </section>
+</div>
+
+<%- include('partials/footer') %>

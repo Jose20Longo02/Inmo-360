@@ -1,0 +1,519 @@
+<%- include('partials/header') %>
+<head>
+  <link rel="stylesheet" href="/css/propertyform.css" />
+  <link rel="stylesheet" href="/css/header.css" />
+</head>
+
+<div class="compact-form-container">
+  <h2 class="form-title"><%= property ? 'Editar Propiedad' : 'Nueva Propiedad' %></h2>
+  <form action="<%= action %>" method="POST" enctype="multipart/form-data">
+    <!-- DATOS BÁSICOS -->
+    <div class="form-section">
+      <h3 class="section-title">Datos Básicos</h3>
+      <div class="input-group">
+        <label for="titulo">Título</label>
+        <input type="text" name="titulo" id="titulo" value="<%= property ? property.titulo : '' %>" required>
+      </div>
+      <div class="input-group">
+        <label for="tipo_propiedad">Tipo de Propiedad</label>
+        <select name="tipo_propiedad" id="tipo_propiedad" required>
+          <option value="">Seleccione...</option>
+          <option value="casa" <%= property && property.tipo_propiedad==='casa' ? 'selected' : '' %>>Casa</option>
+          <option value="apartamento" <%= property && property.tipo_propiedad==='apartamento' ? 'selected' : '' %>>Apartamento</option>
+          <option value="terreno" <%= property && property.tipo_propiedad==='terreno' ? 'selected' : '' %>>Terreno</option>
+          <option value="bodega" <%= property && property.tipo_propiedad==='bodega' ? 'selected' : '' %>>Bodega</option>
+          <option value="local comercial" <%= property && property.tipo_propiedad==='local comercial' ? 'selected' : '' %>>Local comercial</option>
+        </select>
+      </div>
+      <div class="input-group">
+        <label for="departamento">Departamento</label>
+        <select name="departamento" id="departamento" required>
+          <option value="">Seleccione Departamento</option>
+          <% departamentos.forEach(dep => { %>
+            <option value="<%= dep.nombre %>" <%= property && property.departamento === dep.nombre ? 'selected' : '' %>><%= dep.nombre %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="input-group">
+        <label for="municipio">Municipio/Ciudad</label>
+        <select name="municipio" id="municipio" required>
+          <option value="">Seleccione Municipio</option>
+        </select>
+      </div>
+      <div class="input-group">
+        <label for="zona">Zona</label>
+        <select name="zona" id="zona" required>
+          <option value="">Seleccione Zona</option>
+        </select>
+      </div>
+      <div class="input-group">
+        <label for="operacion">Operación</label>
+        <select name="operacion" id="operacion" required>
+          <option value="">Seleccione...</option>
+          <option value="compra" <%= property && property.operacion==='compra'? 'selected':'' %>>Compra</option>
+          <option value="renta" <%= property && property.operacion==='renta'? 'selected':'' %>>Renta</option>
+        </select>
+      </div>
+      <div class="input-group">
+        <label for="precio">Precio</label>
+        <!-- Input de tipo text para poder mostrar "Q" y comas -->
+        <input type="text" name="precio" id="precio" value="<%= property ? property.precio : '' %>" required>
+      </div>
+    </div>
+    
+    <!-- SECCIÓN RESIDENCIAL (Casa/Apartamento) -->
+    <div id="section-residencial" class="form-section" style="display:none;">
+      <h3 class="section-title">Características Residenciales</h3>
+      <div class="residential-grid">
+        <div class="input-group">
+          <label for="habitaciones">Habitaciones</label>
+          <input type="number" name="habitaciones" id="habitaciones" value="<%= property ? property.habitaciones : '' %>" required>
+        </div>
+        <div class="input-group">
+          <label for="banos">Baños</label>
+          <input type="number" name="banos" id="banos" value="<%= property ? property.banos : '' %>" required>
+        </div>
+        <div class="input-group">
+          <label for="m2_construccion">m² de Construcción</label>
+          <input type="number" name="m2_construccion" id="m2_construccion" value="<%= property ? property.m2_construccion : '' %>" required>
+        </div>
+        <div class="input-group">
+          <label for="m2_terreno">m² de Terreno</label>
+          <input type="number" name="m2_terreno" id="m2_terreno" value="<%= property ? property.m2_terreno : '' %>" required>
+        </div>
+      </div>
+      <div class="input-group">
+        <fieldset class="compact-fieldset">
+          <legend>Características Generales</legend>
+          <label>
+            <input type="checkbox" name="caracteristicas[]" value="residencial">
+            Dentro de residencial/condominio privado
+          </label>
+          <label>
+            <input type="checkbox" name="caracteristicas[]" value="seguridad24">
+            Seguridad 24 hrs
+          </label>
+          <label>
+            <input type="checkbox" name="caracteristicas[]" value="amueblada">
+            Se entrega amueblada
+          </label>
+          <label>
+            <input type="checkbox" name="caracteristicas[]" value="semi_amueblada">
+            Se entrega semi-amueblada
+          </label>
+        </fieldset>
+      </div>
+      <div class="luxury-section">
+        <div class="luxury-label">Lujo</div>
+        <div class="input-group">
+          <fieldset class="compact-fieldset">
+            <legend>Características Premium</legend>
+            <label>
+              <input type="checkbox" id="luxo" name="luxo" value="si" <%= property && property.luxo ? 'checked' : '' %>>
+              Marcar si es de lujo
+            </label>
+            <div id="luxury-options" style="display:none;">
+              <label>
+                <input type="checkbox" name="luxury_features[]" value="piscina_privada">
+                Piscina privada
+              </label>
+              <label>
+                <input type="checkbox" name="luxury_features[]" value="jacuzzis">
+                Jacuzzis
+              </label>
+              <label>
+                <input type="checkbox" name="luxury_features[]" value="sauna_vapor">
+                Sauna de vapor
+              </label>
+              <label>
+                <input type="checkbox" name="luxury_features[]" value="sauna_seco">
+                Sauna seco
+              </label>
+              <label>
+                <input type="checkbox" name="luxury_features[]" value="cancha_futbol">
+                Cancha de fútbol
+              </label>
+              <label>
+                <input type="checkbox" name="luxury_features[]" value="cancha_basket">
+                Cancha de basketball
+              </label>
+              <label>
+                <input type="checkbox" name="luxury_features[]" value="vistas_panoramicas">
+                Vistas panorámicas
+              </label>
+            </div>
+          </fieldset>
+        </div>
+      </div>
+    </div>
+    
+    <!-- SECCIÓN TERRENO -->
+    <div id="section-terreno" class="form-section" style="display:none;">
+      <h3 class="section-title">Características del Terreno</h3>
+      <div class="input-group">
+        <label for="tamano_terreno">Tamaño del terreno (m²)</label>
+        <input type="number" name="tamano_terreno" id="tamano_terreno" value="<%= property ? property.tamano_terreno : '' %>" required>
+      </div>
+      <div class="input-group">
+        <fieldset class="compact-fieldset">
+          <legend>Características del Terreno</legend>
+          <label>
+            <input type="checkbox" name="caracteristicas_terreno[]" value="orilla_calle">
+            Está a orilla de calle principal
+          </label>
+          <label>
+            <input type="checkbox" name="caracteristicas_terreno[]" value="orilla_carretera">
+            Está a orilla de carretera principal
+          </label>
+          <div id="frente-calle" style="display:none;">
+            <label for="metros_frente">Metros de frente</label>
+            <input type="number" name="metros_frente" id="metros_frente" value="<%= property ? property.metros_frente : '' %>">
+          </div>
+        </fieldset>
+      </div>
+    </div>
+    <!-- SECCIÓN BODEGA -->
+<div id="section-bodega" class="form-section" style="display:none;">
+  <h3 class="section-title">Características de la Bodega</h3>
+  <div class="input-group">
+    <label for="bodega_tamano">Tamaño total (m²)</label>
+    <input type="number" name="bodega_tamano" id="bodega_tamano">
+  </div>
+  <div class="input-group">
+    <label for="bodega_altura">Altura (m)</label>
+    <input type="number" name="bodega_altura" id="bodega_altura">
+  </div>
+  <div class="input-group">
+    <fieldset class="compact-fieldset">
+      <legend>Características de la Bodega</legend>
+      <label>
+        <input type="checkbox" name="caracteristicas_bodega[]" value="complejo">
+        Está dentro de complejo de bodegas
+      </label>
+      <label>
+        <input type="checkbox" name="caracteristicas_bodega[]" value="seguridad24">
+        Seguridad las 24 hrs
+      </label>
+      <label>
+        <input type="checkbox" id="check-oficina" name="caracteristicas_bodega[]" value="oficina">
+        Cuenta con oficina
+      </label>
+      <div id="oficinas-num" class="input-group" style="display:none;">
+        <label for="cantidad_oficinas">Cantidad de oficinas</label>
+        <input type="number" name="cantidad_oficinas" id="cantidad_oficinas">
+      </div>
+      <label>
+        <input type="checkbox" id="check-bano" name="caracteristicas_bodega[]" value="bano">
+        Cuenta con baño
+      </label>
+      <div id="banos-num" class="input-group" style="display:none;">
+        <label for="cantidad_banos">Cantidad de baños</label>
+        <input type="number" name="cantidad_banos" id="cantidad_banos">
+      </div>
+      <label>
+        <input type="checkbox" name="caracteristicas_bodega[]" value="orilla_autopista">
+        Está a orilla de autopista/carretera
+      </label>
+    </fieldset>
+  </div>
+</div>
+
+<!-- SECCIÓN LOCAL COMERCIAL -->
+<div id="section-local" class="form-section" style="display:none;">
+  <h3 class="section-title">Características del Local Comercial</h3>
+  <div class="input-group">
+    <label for="local_tamano">Tamaño total (m²)</label>
+    <input type="number" name="local_tamano" id="local_tamano">
+  </div>
+  <div class="input-group">
+    <fieldset class="compact-fieldset">
+      <legend>Características del Local</legend>
+      <label>
+        <input type="checkbox" name="caracteristicas_local[]" value="plaza">
+        Dentro de plaza/centro comercial
+      </label>
+      <label>
+        <input type="checkbox" name="caracteristicas_local[]" value="bano_propio">
+        Cuenta con baño propio
+      </label>
+    </fieldset>
+  </div>
+</div>
+    
+    <!-- GALERÍA MULTIMEDIA -->
+    <div class="multimedia-section">
+      <h3 class="section-title">Galería Multimedia</h3>
+    
+      <!-- Subir Imágenes -->
+      <div class="multimedia-subblock">
+        <div class="multimedia-subtitle">Imágenes (máx. 8MB c/u)</div>
+        <div class="upload-area">
+          <label for="imagenes" class="upload-label">Elegir Imágenes</label>
+          <span id="imagenes-info" class="file-info">Sin archivos seleccionados</span>
+          <input type="file" name="imagenes" id="imagenes" accept="image/*" multiple hidden>
+        </div>
+        <div id="preview-imagenes" class="preview-container"></div>
+      </div>
+    
+      <!-- Subir Video -->
+      <div class="multimedia-subblock">
+        <div class="multimedia-subtitle">Video (opcional, máx. 100MB)</div>
+        <div class="upload-area">
+          <label for="video" class="upload-label">Elegir Video</label>
+          <span id="video-info" class="file-info">Sin archivos seleccionados</span>
+          <input type="file" name="video" id="video" accept="video/*" hidden>
+        </div>
+        <div id="preview-video" class="preview-container"></div>
+      </div>
+    
+      <!-- Subir Plano -->
+      <div class="multimedia-subblock plano-block" style="display: none;">
+        <div class="multimedia-subtitle">Plano de Terreno</div>
+        <div class="upload-area">
+          <label for="plano" class="upload-label">Elegir Plano</label>
+          <span id="plano-info" class="file-info">Sin archivo seleccionado</span>
+          <input type="file" name="plano" id="plano" accept="image/*" hidden>
+        </div>
+        <div id="preview-plano" class="preview-container"></div>
+      </div>
+    
+    <!-- CAMPO DE DESCRIPCIÓN (Obligatorio, máx 800 caracteres) -->
+    <div class="input-group">
+      <label for="descripcion">Descripción</label>
+      <textarea name="descripcion" id="descripcion" required rows="6"><%= property ? property.descripcion : '' %></textarea>
+    </div>
+    
+    <button type="submit" class="btn"><%= property ? 'Actualizar' : 'Crear' %></button>
+  </form>
+</div>
+
+<!-- SCRIPT: Actualización dinámica de Municipio y Zona -->
+<script>
+  var departments = JSON.parse('<%- JSON.stringify(departamentos) %>');
+  const departamentoSelect = document.getElementById('departamento');
+  const municipioSelect = document.getElementById('municipio');
+  const zonaSelect = document.getElementById('zona');
+
+  departamentoSelect.addEventListener('change', () => {
+    municipioSelect.innerHTML = '<option value="">Seleccione Municipio</option>';
+    zonaSelect.innerHTML = '<option value="">Seleccione Zona</option>';
+    if(departamentoSelect.value) {
+      const dept = departments.find(d => d.nombre === departamentoSelect.value);
+      if(dept) {
+        dept.municipios.forEach(m => {
+          const option = document.createElement('option');
+          option.value = m.nombre;
+          option.text = m.nombre;
+          municipioSelect.appendChild(option);
+        });
+      }
+    }
+  });
+
+  municipioSelect.addEventListener('change', () => {
+    zonaSelect.innerHTML = '<option value="">Seleccione Zona</option>';
+    if(departamentoSelect.value && municipioSelect.value) {
+      const dept = departments.find(d => d.nombre === departamentoSelect.value);
+      if(dept) {
+        const mun = dept.municipios.find(m => m.nombre === municipioSelect.value);
+        if(mun) {
+          mun.zonas.forEach(z => {
+            const option = document.createElement('option');
+            option.value = z;
+            option.text = z;
+            zonaSelect.appendChild(option);
+          });
+        }
+      }
+    }
+  });
+</script>
+
+<!-- SCRIPT: Secciones condicionales y vistas previas -->
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const tipoPropiedadSelect = document.getElementById('tipo_propiedad');
+    const sectionResidencial = document.getElementById('section-residencial');
+    const sectionTerreno = document.getElementById('section-terreno');
+    const sectionBodega = document.getElementById('section-bodega');
+    const sectionLocal = document.getElementById('section-local');
+
+    const checkOficina = document.getElementById('check-oficina');
+    const oficinasNum = document.getElementById('oficinas-num');
+    const checkBano = document.getElementById('check-bano');
+    const banosNum = document.getElementById('banos-num');
+
+    const luxoCheckbox = document.getElementById('luxo');
+    const luxuryOptions = document.getElementById('luxury-options');
+
+    const terrenoCheckboxes = document.querySelectorAll('input[name="caracteristicas_terreno[]"]');
+    const frenteCalleDiv = document.getElementById('frente-calle');
+    const metrosInput = document.getElementById('metros_frente');
+
+    const planoInput = document.getElementById('plano');
+    const planoBlock = document.querySelector('.plano-block');
+
+    function setRequiredAttributes(section, required) {
+      const inputs = section.querySelectorAll('input:not([type="checkbox"]), select, textarea');
+      inputs.forEach(input => {
+        if (required) input.setAttribute('required', 'required');
+        else input.removeAttribute('required');
+      });
+    }
+
+    function toggleSections() {
+      const tipo = tipoPropiedadSelect.value;
+      sectionResidencial.style.display = tipo === 'casa' || tipo === 'apartamento' ? 'block' : 'none';
+      sectionTerreno.style.display = tipo === 'terreno' ? 'block' : 'none';
+      sectionBodega.style.display = tipo === 'bodega' ? 'block' : 'none';
+      sectionLocal.style.display = tipo === 'local comercial' ? 'block' : 'none';
+      setRequiredAttributes(sectionResidencial, tipo === 'casa' || tipo === 'apartamento');
+      setRequiredAttributes(sectionTerreno, tipo === 'terreno');
+
+      // Mostrar plano solo para terreno
+      if (tipo === 'terreno') {
+        planoBlock.style.display = 'block';
+        planoInput.setAttribute('required', 'required');
+      } else {
+        planoBlock.style.display = 'none';
+        planoInput.removeAttribute('required');
+        planoInput.value = '';
+        document.getElementById('preview-plano').innerHTML = '';
+        document.getElementById('plano-info').textContent = 'Sin archivo seleccionado';
+      }
+    }
+
+    tipoPropiedadSelect.addEventListener('change', toggleSections);
+    toggleSections();
+
+    if (luxoCheckbox) {
+      luxoCheckbox.addEventListener('change', () => {
+        luxuryOptions.style.display = luxoCheckbox.checked ? 'block' : 'none';
+      });
+      if (luxoCheckbox.checked) luxuryOptions.style.display = 'block';
+    }
+
+    terrenoCheckboxes.forEach(checkbox => {
+      checkbox.addEventListener('change', () => {
+        const anyChecked = Array.from(terrenoCheckboxes).some(chk => chk.checked);
+        frenteCalleDiv.style.display = anyChecked ? 'block' : 'none';
+        metrosInput.toggleAttribute('required', anyChecked);
+        if (!anyChecked) metrosInput.value = '';
+      });
+    });
+
+    if (checkOficina) {
+      checkOficina.addEventListener('change', () => {
+        oficinasNum.style.display = checkOficina.checked ? 'block' : 'none';
+      });
+    }
+    if (checkBano) {
+      checkBano.addEventListener('change', () => {
+        banosNum.style.display = checkBano.checked ? 'block' : 'none';
+      });
+    }
+
+    function previewFiles(input, previewContainerId, type = 'image') {
+      const previewContainer = document.getElementById(previewContainerId);
+      previewContainer.innerHTML = '';
+      const originalFiles = Array.from(input.files);
+      const validFiles = [];
+
+      const sizeLimit = type === 'image' ? 8 * 1024 * 1024 : 100 * 1024 * 1024;
+
+      originalFiles.forEach(file => {
+        if (!file.type.startsWith(type + '/')) return;
+
+        if (file.size > sizeLimit) {
+          alert(`El archivo "${file.name}" excede el límite de tamaño permitido (${type === 'image' ? '5MB' : '50MB'}).`);
+          return;
+        }
+
+        validFiles.push(file);
+      });
+
+      const dataTransfer = new DataTransfer();
+
+      validFiles.forEach((file, i) => {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          const previewItem = document.createElement('div');
+          previewItem.className = 'preview-item';
+
+          const removeBtn = document.createElement('button');
+          removeBtn.className = 'remove-preview';
+          removeBtn.innerText = '×';
+          removeBtn.addEventListener('click', (ev) => {
+            ev.preventDefault();
+            ev.stopPropagation();
+            validFiles.splice(i, 1);
+            previewFilesFromArray(input, previewContainerId, validFiles, type);
+          });
+
+          const media = document.createElement(type === 'image' ? 'img' : 'video');
+          media.src = e.target.result;
+          media.className = type === 'image' ? 'preview-img' : 'preview-video';
+          if (type === 'video') media.controls = true;
+
+          previewItem.appendChild(removeBtn);
+          previewItem.appendChild(media);
+          previewContainer.appendChild(previewItem);
+        };
+        reader.readAsDataURL(file);
+        dataTransfer.items.add(file);
+      });
+
+      input.files = dataTransfer.files;
+
+      const infoSpan = document.getElementById(`${input.id}-info`);
+      if (infoSpan) {
+        infoSpan.textContent = input.files.length > 0
+          ? `${input.files.length} archivo(s) seleccionado(s)`
+          : 'Sin archivos seleccionados';
+      }
+    }
+
+    function previewFilesFromArray(input, previewContainerId, filesArray, type) {
+      const dataTransfer = new DataTransfer();
+      filesArray.forEach(file => dataTransfer.items.add(file));
+      input.files = dataTransfer.files;
+      previewFiles(input, previewContainerId, type);
+    }
+
+    document.getElementById('imagenes').addEventListener('change', function () {
+      previewFiles(this, 'preview-imagenes', 'image');
+    });
+
+    document.getElementById('video').addEventListener('change', function () {
+      previewFiles(this, 'preview-video', 'video');
+    });
+
+    document.getElementById('plano').addEventListener('change', function () {
+      previewFiles(this, 'preview-plano', 'image');
+    });
+
+    const precioInput = document.getElementById('precio');
+    if (precioInput) {
+      precioInput.addEventListener('focus', function () {
+        let raw = precioInput.value.replace(/^Q\s*/, '').replace(/,/g, '');
+        precioInput.value = raw;
+      });
+      precioInput.addEventListener('blur', function () {
+        let raw = precioInput.value.replace(/^Q\s*/, '').replace(/,/g, '');
+        if (!raw.trim()) return;
+        let num = parseFloat(raw);
+        if (isNaN(num)) {
+          precioInput.value = '';
+        } else {
+          let formatted = num.toLocaleString('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+          });
+          precioInput.value = 'Q' + formatted;
+        }
+      });
+    }
+  });
+</script>
+
+<%- include('partials/footer') %>

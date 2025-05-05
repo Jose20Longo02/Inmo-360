@@ -1,0 +1,182 @@
+/* adminAgencies.css */
+
+/* Reset ligero */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Contenedor general */
+.admin-container {
+  max-width: 1000px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+  font-family: Arial, sans-serif;
+  color: #333;
+}
+
+.admin-container h1 {
+  text-align: center;
+  margin-bottom: 2rem;
+  font-size: 2rem;
+  color: #000;
+}
+
+/* Tabla de solicitudes */
+.admin-table {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Cada tarjeta */
+.admin-card {
+  display: flex;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  overflow: hidden;
+}
+
+/* Sección izquierda: logo */
+.admin-card-left {
+  flex: 0 0 120px;
+  background: #f4f4f4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+}
+
+.agency-logo {
+  max-width: 100%;
+  max-height: 80px;
+  object-fit: contain;
+  border-radius: 6px;
+}
+
+.agency-logo-placeholder {
+  width: 80px;
+  height: 80px;
+  background: #ddd;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #777;
+  font-size: 0.85rem;
+}
+
+/* Sección central: datos */
+.admin-card-middle {
+  flex: 1;
+  padding: 1rem 1.5rem;
+}
+
+.admin-card-middle h2 {
+  font-size: 1.3rem;
+  margin-bottom: 0.5rem;
+  color: #000;
+}
+
+.admin-card-middle p {
+  font-size: 0. nine rem; /* 0.95rem */
+  margin-bottom: 0.4rem;
+}
+
+.admin-card-middle hr {
+  margin: 0.8rem 0;
+  border: none;
+  border-top: 1px solid #eee;
+}
+
+/* Sección derecha: acciones */
+.admin-card-right {
+  flex: 0 0 180px;
+  background: #fafafa;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+/* Input motivo rechazo */
+.admin-card-right input[name="motivo"] {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 0. nine rem; /* 0.95rem */
+}
+
+/* Botones */
+.admin-card-right .btn {
+  padding: 0.6rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 0. nine rem; /* 0.95rem */
+  cursor: pointer;
+  transition: background-color 0.3s;
+  width: 100%;
+}
+
+.admin-card-right .btn.approve {
+  background-color: #75FBD3;
+  color: #000;
+}
+
+.admin-card-right .btn.approve:hover {
+  background-color: #5ae6c4;
+}
+
+.admin-card-right .btn.reject {
+  background-color: #e74c3c;
+  color: #fff;
+}
+
+.admin-card-right .btn.reject:hover {
+  background-color: #c0392b;
+}
+
+/* Mensaje cuando no hay resultados */
+.no-results-msg {
+  text-align: center;
+  color: #777;
+  font-size: 1rem;
+  margin-top: 2rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .admin-card {
+    flex-direction: column;
+  }
+  .admin-card-left,
+  .admin-card-right {
+    flex: none;
+    width: auto;
+  }
+  .admin-card-right {
+    flex-direction: row;
+    gap: 0.5rem;
+    padding: 0.75rem;
+  }
+  .admin-card-right input[name="motivo"] {
+    flex: 1;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-container {
+    padding: 1rem;
+  }
+  .admin-card-middle {
+    padding: 0.75rem 1rem;
+  }
+  .admin-card-right {
+    flex-direction: column;
+  }
+}

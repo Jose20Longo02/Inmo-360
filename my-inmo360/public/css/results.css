@@ -1,0 +1,596 @@
+/* Reset */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Encabezado de resultados */
+.results-header {
+  background-color: #f9f9f9;
+  padding: 1.5rem 0;
+}
+
+.results-header__container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.results-summary {
+  font-size: 1.4rem;
+  font-weight: bold;
+  color: #000;
+}
+
+/* Sección principal */
+.results-section {
+  background-color: #fff;
+  padding: 2rem 0;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  color: #000;
+}
+
+.results-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  gap: 2rem;
+  padding: 0 1rem;
+}
+
+/* PANEL DE FILTROS */
+/* PANEL DE FILTROS (MISMO ORDEN Y BASE) */
+.filters-panel {
+  flex: 0 0 300px;
+  border: 1px solid #ccc;
+  padding: 1.5rem;
+  border-radius: 6px;
+  background-color: #fff;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  margin-bottom: 1.5rem;
+}
+
+.mobile-filters-toggle {
+  display: none;
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 768px) {
+  .filters-panel {
+    display: none;
+  }
+  .mobile-filters-toggle {
+    display: block;
+  }
+}
+
+.filters-panel h3 {
+  font-size: 1.3rem;
+  margin-bottom: 1rem;
+  font-weight: bold;
+  color: #000;
+}
+
+.filter-group {
+  margin-bottom: 1rem;
+}
+
+.filter-group label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: normal;
+  color: #000;
+  margin-bottom: 0.3rem;
+}
+
+.filter-group .checkbox-group label {
+  font-weight: normal; /* Quita el bold a los checkbox individuales */
+}
+
+.range-fields {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.range-fields input {
+  flex: 1;
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.checkbox-group label {
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+/* APARTADO DE LUJO - FONDO DORADO RELUCIENTE Y TEXTO A LA IZQUIERDA */
+/* APARTADO DE LUJO - Glow dorado elegante */
+/* APARTADO DE LUJO - Glow de fondo dorado elegante */
+.luxury-filter {
+  position: relative;
+  background-color: #fff; /* Fondo blanco */
+  padding: 1rem;
+  padding-top: 1.5rem;
+  border-radius: 8px;
+  margin-top: 1.5rem;
+  overflow: hidden;
+}
+
+/* Glow dorado de fondo */
+.luxury-filter::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle at center, rgba(255, 215, 0, 0.3) 0%, rgba(255, 215, 0, 0) 70%);
+  animation: backgroundGlow 6s ease-in-out infinite;
+  z-index: 0;
+}
+
+/* Contenido encima */
+.luxury-filter > * {
+  position: relative;
+  z-index: 1;
+}
+
+
+/* Animación sutil */
+@keyframes backgroundGlow {
+  0% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+}
+
+/* Contenedor del checkbox principal */
+.luxury-filter label {
+  display: flex;
+  align-items: center; /* CENTRADO VERTICAL */
+  font-weight: normal;
+  font-size: 1.05rem;
+  color: #333;
+  margin-bottom: 1rem;
+}
+
+/* Checkbox input */
+.luxury-filter input[type="checkbox"] {
+  margin-right: 0.6rem;
+}
+
+/* Opciones desplegables */
+.luxury-options {
+  display: none;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #ffd700;
+}
+
+.luxury-options.active {
+  display: block;
+}
+
+.luxury-options label {
+  font-size: 0.95rem;
+  font-weight: normal;
+  color: #444;
+  margin-bottom: 0.5rem;
+  display: block;
+}
+
+/* Mejor separación en todos los grupos de checkbox */
+.checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  margin-top: 1rem;
+}
+
+.checkbox-group label {
+  font-size: 0.95rem;
+  font-weight: normal;
+  color: #333;
+  cursor: pointer;
+}
+
+.filter-group > label
+{
+  font-weight: 600;
+}
+
+/* Botón aplicar filtros */
+.apply-filters-btn {
+  background-color: #75FBD3; /* Turquesa de la página */
+  color: #000; /* Texto negro */
+  border: none;
+  padding: 0.8rem 1.4rem;
+  font-size: 1rem;
+  font-weight: bold;
+  border-radius: 6px;
+  cursor: pointer;
+  width: 100%;
+  margin-bottom: 1rem;
+  transition: background-color 0.3s, transform 0.3s;
+}
+
+.apply-filters-btn:hover {
+  background-color: #5ae6c4; /* Turquesa más intenso al hover */
+  transform: scale(1.02);
+}
+
+/* Botón limpiar filtros */
+.clear-filters-btn {
+  background-color: #fff; /* Blanco */
+  color: #000; /* Texto negro */
+  border: 2px solid #75FBD3; /* Borde turquesa */
+  padding: 0.8rem 1.4rem;
+  font-size: 1rem;
+  font-weight: bold;
+  border-radius: 6px;
+  cursor: pointer;
+  width: 100%;
+  margin-bottom: 1rem;
+  transition: background-color 0.3s, transform 0.3s;
+}
+
+.clear-filters-btn:hover {
+  background-color: #f0f0f0; /* Ligero gris al pasar mouse */
+  transform: scale(1.02);
+}
+
+/* Botón reiniciar búsqueda */
+.reset-search-btn {
+  background-color: #000; /* Fondo negro */
+  color: #fff; /* Texto blanco */
+  border: none;
+  padding: 0.8rem 1.4rem;
+  font-size: 1rem;
+  font-weight: bold;
+  border-radius: 6px;
+  cursor: pointer;
+  width: 100%;
+  text-align: center;
+  text-decoration: none;
+  transition: background-color 0.3s, transform 0.3s;
+}
+
+.reset-search-btn:hover {
+  background-color: #222; /* Negro más claro */
+  transform: scale(1.02);
+}
+
+.results-list {
+  flex: 1;
+  display: block;
+}
+
+/* ===== REDISEÑO DE PROPIEDADES ===== */
+.result-card {
+  background-color: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 2rem;
+  border: 1px solid #eee;
+  transition: box-shadow 0.3s;
+  position: relative;
+  border-top: 5px solid #75FBD3;
+}
+
+/* Header del anunciante */
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.8rem 1rem;
+  background-color: #fff;
+  border-bottom: 1px solid #eee;
+}
+
+.card-header .left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.card-header .left img {
+  height: 45px;
+  width: auto;
+  max-width: 120px;
+  border-radius: 20%;
+}
+
+.card-header .left span {
+  font-size: 0.75rem;
+  color: #888;
+  font-style: italic;
+}
+
+.card-header .right {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.card-header .right img {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #75FBD3;
+}
+
+.card-header .right .info {
+  text-align: right;
+  font-size: 0.85rem;
+  line-height: 1.2;
+}
+
+.card-header .right .info strong {
+  color: #000;
+}
+
+/* Imagen principal */
+.result-card__image {
+  width: 100%;
+  height: 220px;
+  overflow: hidden;
+  position: relative;
+}
+
+.result-card__image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Detalles */
+.card-details {
+  padding: 1rem;
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.left-column {
+  flex: 1;
+}
+
+.result-card__title {
+  font-size: 1.2rem;
+  font-weight: 400;
+  color: #000;
+  margin-bottom: 0.7rem; /* Antes era 0.4rem */
+}
+
+.result-location {
+  color: #666;
+  font-size: 0.9rem;
+  margin-bottom: 0.7rem; /* Antes era 0.4rem */
+}
+
+.property-price {
+  font-size: 1rem;
+  font-weight: 400;
+  color: #000;
+  margin-bottom: 0.7rem; /* Antes era 0.4rem */
+}
+
+.property-characteristics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem; /* Un poco más de separación entre iconos */
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.characteristic-item {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: #333;
+}
+
+.characteristic-item img {
+  width: 18px;
+  height: 18px;
+}
+
+/* Botones a la derecha */
+.right-column-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1rem; /* MÁS separación entre corazón y botón */
+  margin-top: 1rem;
+}
+
+.btn-view-more {
+  background-color: #75FBD3;
+  color: #000;
+  border: none;
+  padding: 0.5rem 1.2rem;
+  border-radius: 6px;
+  font-weight: bold;
+  font-size: 1rem;
+  cursor: pointer;
+  text-align: center;
+  display: inline-block;
+  transition: background-color 0.3s;
+  text-decoration: none;
+}
+
+.btn-view-more:hover {
+  background-color: #5ae6c4;
+}
+
+.btn-heart {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+}
+
+.heart-icon {
+  width: 30px; /* Más grande */
+  height: 30px;
+  transition: transform 0.2s ease;
+}
+
+.btn-heart:hover .heart-icon {
+  transform: scale(1.1);
+}
+
+.property-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background-color: #75FBD3;
+  color: #000;
+  font-size: 0.75rem;
+  font-weight: bold;
+  padding: 0.3rem 0.5rem;
+  border-radius: 6px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+  z-index: 2;
+  width: auto;       /* 👈 Asegura que NO ocupe todo el ancho */
+  max-width: 90px;   /* 👈 Un límite para que no se haga grande */
+  text-align: center; /* 👈 Centra el texto */
+  white-space: nowrap; /* 👈 Evita que el texto se quiebre */
+}
+
+/* ==== Estilo para propiedades de lujo (mejorado) ==== */
+
+/* Línea superior dorada más fuerte (sin animación) */
+.luxury-property {
+  border-top: 5px solid #ffe600; /* Dorado más vibrante */
+}
+
+/* Etiqueta "En venta"/"En renta" dorada más fuerte (sin animación) */
+.luxury-property .property-badge {
+  background-color: #ffe600;
+  color: #000;
+}
+
+/* Botón "Ver más" dorado claro animado */
+.luxury-property .btn-view-more {
+  background: linear-gradient(90deg, #ffe600, #fff6d0, #ffe600);
+  background-size: 300% 300%;
+  animation: shine 4s linear infinite;
+  color: #000;
+  border: none;
+  padding: 0.5rem 1.3rem;
+  border-radius: 6px;
+  font-weight: bold;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+.luxury-property .btn-view-more:hover {
+  transform: scale(1.05);
+}
+
+/* Borde dorado más fuerte en la foto del anunciante */
+.luxury-property .card-header .right img {
+  border: 2px solid #ffe600;
+}
+
+/* Animación de brillo para el botón */
+@keyframes shine {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .results-container {
+    flex-direction: column;
+  }
+  .filters-panel {
+    width: 100%;
+  }
+  .result-card__image {
+    height: 200px;
+  }
+  .card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.8rem;
+  }
+  .card-header .right {
+    justify-content: flex-start;
+  }
+  .card-details {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .right-column-actions {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+}
+
+@media (max-width: 600px) {
+  .results-container {
+    gap: 1rem;
+  }
+  .result-card__image {
+    height: 180px;
+  }
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin: 2rem auto;
+  flex-wrap: wrap;
+}
+
+.page-link {
+  padding: 8px 14px;
+  border: 1px solid #ccc;
+  background-color: white;
+  color: #333;
+  text-decoration: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+.page-link:hover {
+  background-color: #f0f0f0;
+}
+
+.page-link.active {
+  background-color: #333;
+  color: white;
+  font-weight: bold;
+  border-color: #333;
+}

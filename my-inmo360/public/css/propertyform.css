@@ -1,0 +1,300 @@
+/* Reset */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: Arial, sans-serif;
+}
+
+body {
+  background: url('../images/landscape-antigua.JPG') no-repeat center center fixed;
+  background-size: cover;
+  position: relative;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: -1;
+}
+
+.compact-form-container {
+  max-width: 600px;
+  margin: 1.5rem auto;
+  padding: 1.5rem;
+  background-color: #fff;
+  border: 1px solid #000;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+}
+
+.form-title {
+  text-align: center;
+  margin-bottom: 1.5rem;
+  font-size: 2rem;
+  color: #000;
+}
+
+.form-section {
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid #ccc;
+  padding-bottom: 1rem;
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0.8rem;
+}
+
+.residential-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.section-title {
+  font-size: 1.4rem;
+  margin-bottom: 0.8rem;
+  color: #000;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid #75FBD3;
+}
+
+.compact-form-container form label {
+  margin-bottom: 0.3rem;
+  font-weight: normal;
+  color: #000;
+}
+
+.compact-form-container form input[type="text"],
+.compact-form-container form input[type="number"],
+.compact-form-container form input[type="email"],
+.compact-form-container form input[type="file"],
+.compact-form-container form select,
+.compact-form-container form textarea {
+  width: 100%;
+  padding: 0.5rem;
+  margin-bottom: 0.8rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.95rem;
+  color: #000;
+  background-color: #f9f9f9;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
+  transition: border 0.3s, box-shadow 0.3s;
+}
+
+.compact-form-container form input:focus,
+.compact-form-container form select:focus,
+.compact-form-container form textarea:focus {
+  border-color: #75FBD3;
+  box-shadow: 0 0 5px rgba(117, 251, 211, 0.6);
+  outline: none;
+}
+
+.compact-form-container form textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.compact-fieldset {
+  border: 1px solid #ccc;
+  padding: 0.8rem;
+  margin-bottom: 0.8rem;
+  border-radius: 4px;
+}
+
+.compact-fieldset legend {
+  padding: 0 0.5rem;
+  font-weight: normal;
+  color: #000;
+}
+
+.compact-fieldset label {
+  display: block;
+  margin-bottom: 0.4rem;
+}
+
+/* ===== Multimedia Section Redesigned ===== */
+.multimedia-section {
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  background-color: #f9f9f9;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.multimedia-subtitle {
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+  color: #000;
+  font-weight: 300;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 0.3rem;
+}
+
+.upload-area {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.upload-label {
+  background-color: #75FBD3;
+  color: #000;
+  padding: 0.6rem 1.2rem;
+  font-size: 0.95rem;
+  font-weight: bold;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.upload-label:hover {
+  background-color: #5ae6c4;
+}
+
+.file-info {
+  font-size: 0.9rem;
+  color: #888;
+  font-style: italic;
+}
+
+.preview-container {
+  margin-top: 0.5rem;
+  margin-bottom: 1.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+}
+
+.preview-item {
+  position: relative;
+}
+
+.preview-img {
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+}
+
+.preview-video {
+  width: 180px;
+  height: auto;
+  max-height: 180px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+}
+
+.remove-preview {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background-color: rgba(0,0,0,0.7);
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+}
+
+.file-limit {
+  font-size: 0.8rem;
+  color: #888;
+  margin-left: 0.5rem;
+  font-style: italic;
+}
+
+/* Lujo con fondo blur dorado */
+.luxury-section {
+  margin-top: 1.5rem;
+  position: relative;
+  padding: 1rem;
+  border-radius: 8px;
+  background-color: #fff;
+  overflow: hidden;
+}
+
+.luxury-section::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle at center, rgba(212,175,55,0.2) 0%, rgba(255,255,255,0) 80%);
+  animation: luxuryGlow 6s ease-in-out infinite;
+  z-index: 0;
+}
+
+.luxury-section > * {
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes luxuryGlow {
+  0%, 100% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
+.luxury-label {
+  font-size: 1.3rem;
+  color: black;
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+
+/* Botón submit */
+.compact-form-container form .btn {
+  display: block;
+  width: 100%;
+  background-color: #75FBD3;
+  color: #000;
+  border: none;
+  padding: 0.7rem;
+  border-radius: 4px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  margin-top: 2rem;
+}
+
+.compact-form-container form .btn:hover {
+  background-color: #5ae6c4;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .compact-form-container {
+    padding: 1rem;
+  }
+  .residential-grid {
+    grid-template-columns: 1fr;
+  }
+}

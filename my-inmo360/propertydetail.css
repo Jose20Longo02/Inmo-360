@@ -1,0 +1,296 @@
+
+/* Reset */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.property-detail-container {
+  max-width: 1200px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  color: #000;
+}
+
+.detail-main {
+  display: flex;
+  gap: 2rem;
+  align-items: stretch; /* <- Asegura misma altura */
+}
+
+.slider-container {
+  flex: 2;
+  position: relative;
+}
+
+.slider {
+  position: relative;
+  overflow: hidden;
+  height: 500px;
+  border-radius: 8px;
+}
+
+.slide {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 0.5s;
+}
+
+.slide.active {
+  opacity: 1;
+}
+
+.slide img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.slider-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0, 0, 0, 0.4);
+  color: #fff;
+  border: none;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  font-size: 1.5rem;
+  border-radius: 4px;
+}
+
+.slider-btn.prev {
+  left: 1rem;
+}
+
+.slider-btn.next {
+  right: 1rem;
+}
+
+.slide-count {
+  margin-top: 0.5rem;
+  font-weight: bold;
+  text-align: center;
+}
+
+.contact-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%; /* Misma altura que el slider */
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 1rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.contact-panel h2 {
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.contact-info {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.contact-info img {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #75FBD3;
+}
+
+.agent-details {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: left;
+}
+
+.agency-info {
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+  text-align: center;
+}
+
+.contact-panel .btn {
+  padding: 0.6rem 1rem;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+  width: 100%;
+  margin-top: 0.5rem;
+  transition: background 0.3s;
+}
+
+.detail-actions {
+  display: flex;
+  gap: 1rem;
+  margin: 2rem 0 1rem;
+  justify-content: flex-start;
+}
+
+.btn {
+  padding: 0.7rem 1.2rem;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.btn.primary {
+  background-color: #75FBD3;
+  color: #000;
+  border: none;
+}
+
+.btn.primary:hover {
+  background-color: #5ae6c4;
+}
+
+.btn.outline {
+  background: transparent;
+  border: 2px solid #75FBD3;
+  color: #75FBD3;
+}
+
+.btn.outline:hover {
+  background-color: #75FBD3;
+  color: #000;
+}
+
+.detail-content {
+  display: flex;
+  gap: 2rem;
+}
+
+.description-section {
+  flex: 2;
+}
+
+.description-section h1 {
+  margin-bottom: 0.5rem;
+}
+
+.location {
+  color: #666;
+  margin-bottom: 0.5rem;
+}
+
+.price {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.description-section .description {
+  line-height: 1.6;
+}
+
+.info-box {
+  flex: 1;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 1rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.info-box h3 {
+  margin-bottom: 1rem;
+}
+
+.info-box ul {
+  list-style: none;
+  padding: 0;
+  width: 100%;
+}
+
+.info-box li {
+  margin-bottom: 0.8rem;
+  font-size: 0.95rem;
+  text-align: center;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .detail-main {
+    flex-direction: column-reverse;
+  }
+
+  .contact-panel {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: nowrap !important; /* <- EVITA salto de línea */
+    gap: 0.5rem;
+    padding: 0.6rem;
+    height: auto;
+    overflow-x: auto; /* Por si llega a desbordar */
+  }
+
+  .contact-info {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 0 0 auto;
+    min-width: auto;
+  }
+
+  .contact-info img {
+    width: 50px;
+    height: 50px;
+    flex-shrink: 0;
+  }
+
+  .agent-details {
+    font-size: 0.75rem;
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  .contact-panel .btn {
+    font-size: 0.65rem;
+    padding: 0.4rem 0.6rem;
+    margin: 0;
+    flex: 0 0 auto;
+    white-space: nowrap;
+    min-width: fit-content;
+  }
+
+  .contact-panel .btn + .btn {
+    margin-left: 0.4rem;
+  }
+
+  .contact-panel h2,
+  .agency-info {
+    display: none;
+  }
+
+  .detail-content {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 400px) {
+  .contact-panel {
+    overflow-x: scroll;
+  }
+}

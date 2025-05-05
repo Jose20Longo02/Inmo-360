@@ -1,0 +1,363 @@
+/* --- Estilos generales del header --- */
+.site-header {
+  background-color: #000;
+  color: #fff;
+  padding: 1rem 0;
+  position: relative;
+}
+
+.header-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+
+/* Logo */
+.logo img {
+  height: 40px;
+  margin-right: 1rem;
+}
+
+/* --- Desktop Navigation --- */
+.desktop-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 1;
+}
+
+.desktop-nav .main-nav ul {
+  list-style: none;
+  display: flex;
+  gap: 2rem;
+  margin: 0;
+  padding: 0;
+}
+
+.desktop-nav .main-nav a {
+  color: #fff;
+  text-decoration: none;
+  font-size: 1rem;
+}
+
+.desktop-nav .main-nav a:hover {
+  text-decoration: underline;
+}
+
+/* Sección CTA y Login para Desktop */
+.cta-and-login {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* Estilo para el CTA en usuarios no logueados (fondo blanco y texto negro) */
+.cta-button {
+  background-color: #fff;
+  color: #000;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  text-decoration: none;
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+
+.cta-button:hover {
+  background-color: #f2f2f2;
+}
+
+/* Regla específica para el CTA de usuarios logueados en desktop (fondo #75FBD3) */
+.cta-and-login a.cta-button[href="/properties/new"] {
+  background-color: #75FBD3;
+  color: #000;
+}
+
+/* Login link */
+.login-link {
+  color: #fff;
+  text-decoration: none;
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+
+.login-link:hover {
+  text-decoration: underline;
+}
+
+/* Usuario (logged in) Desktop: botón de perfil con dropdown */
+.user-menu-container {
+  position: relative;
+  display: inline-block;
+}
+
+.user-panel-button img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid #75FBD3;
+  object-fit: cover;
+  cursor: pointer;
+}
+
+/* Dropdown del usuario */
+.user-dropdown {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: 45px;
+  background-color: #fff;
+  border: 1px solid #75FBD3;
+  border-radius: 4px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  z-index: 100;
+}
+
+.user-dropdown a {
+  display: block;
+  padding: 0.5rem 1rem;
+  color: #000;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.user-dropdown a:hover {
+  background-color: #f2f2f2;
+}
+
+.user-dropdown.active {
+  display: block;
+}
+
+/* --- Mobile Header --- */
+.mobile-header {
+  display: none;
+  width: 100%;
+  padding: 0 1rem;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  z-index: 10;
+}
+
+.mobile-left, .mobile-right {
+  display: flex;
+  align-items: center;
+}
+
+/* Ícono de hamburguesa */
+.hamburger-menu {
+  display: none;
+  flex-direction: column;
+  cursor: pointer;
+}
+
+.hamburger-menu span {
+  height: 3px;
+  width: 25px;
+  background-color: #fff;
+  margin: 4px 0;
+  transition: 0.4s;
+}
+
+/* --- Mobile Navigation Desplegable --- */
+.mobile-nav {
+  display: none;
+  background-color: #000;
+  position: absolute;
+  top: 100%; /* Justo debajo del header */
+  left: 0;
+  width: 100%;
+  z-index: 9;
+  padding: 0;
+  margin: 0;
+}
+
+.mobile-nav.active {
+  display: block;
+}
+
+.mobile-nav ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.mobile-nav ul li {
+  padding: 1rem;  /* Mayor espacio */
+  border-bottom: 1px solid #333;
+  text-align: center;
+}
+
+.mobile-nav ul li:last-child {
+  border-bottom: none;
+}
+
+.mobile-nav a {
+  color: #fff;
+  text-decoration: none;
+  font-size: 1rem;
+}
+
+/* En Mobile, forzar que solo el CTA de usuarios logueados (href="/properties/new") tenga fondo #75FBD3 */
+.mobile-header a.cta-button[href="/properties/new"] {
+  background-color: #75FBD3;
+  color: #000;
+}
+
+/* Los CTA de usuarios no logueados en mobile (por ejemplo, href="/publicar") usarán el estilo por defecto (blanco, texto negro) */
+.mobile-header a.cta-button:not([href="/properties/new"]) {
+  background-color: #fff;
+  color: #000;
+}
+
+/* --- Responsividad --- */
+@media (max-width: 768px) {
+  .desktop-nav {
+    display: none;
+  }
+  .mobile-header {
+    display: flex;
+  }
+  .hamburger-menu {
+    display: flex;
+  }
+}
+
+
+/* ---------------- Notification Bell Desktop ---------------- */
+#notif-container {
+  position: relative;
+  display: inline-block;
+  margin-left: 1rem;
+}
+
+#notif-button {
+  background: none;
+  border: none;
+  font-size: 1.8rem;    /* campanita más grande */
+  cursor: pointer;
+  position: relative;
+  color: #333;
+}
+
+#notif-badge {
+  position: absolute;
+  bottom: -4px;         /* abajo de la campana */
+  right: -4px;          /* a la derecha de la campana */
+  background: red;
+  color: #fff;
+  border-radius: 50%;
+  padding: 0 6px;
+  font-size: 0.7rem;
+  line-height: 1;
+}
+
+/* Dropdown */
+#notif-dropdown {
+  position: absolute;
+  right: 0;
+  top: 120%;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  width: 260px;
+  max-height: 320px;
+  overflow-y: auto;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  list-style: none;
+  margin: 0;
+  padding: 0.5rem 0;
+  z-index: 1000;
+}
+
+#notif-dropdown.hidden {
+  display: none;
+}
+
+#notif-dropdown li {
+  padding: 0.6rem 1rem;
+  font-size: 0.95rem;
+  color: #333;
+  cursor: pointer;
+}
+
+#notif-dropdown li:hover {
+  background-color: #f5f5f5;
+}
+
+#notif-dropdown li.unread {
+  background-color: #eef6ff;
+}
+/* ----------------------------------------------------------- */
+
+
+/* ---------------- Notification Bell Mobile ---------------- */
+#notif-container-mobile {
+  position: relative;
+  display: inline-block;
+  margin-left: 0.5rem;
+}
+
+#notif-button-mobile {
+  background: none;
+  border: none;
+  font-size: 1.8rem;    /* campanita más grande en mobile */
+  cursor: pointer;
+  position: relative;
+  color: #333;
+}
+
+#notif-badge-mobile {
+  position: absolute;
+  bottom: -4px;         /* abajo de la campana */
+  right: -4px;          /* a la derecha de la campana */
+  background: red;
+  color: #fff;
+  border-radius: 50%;
+  padding: 0 6px;
+  font-size: 0.7rem;
+  line-height: 1;
+}
+
+#notif-dropdown-mobile {
+  position: absolute;
+  right: 0;
+  top: 120%;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  width: 220px;
+  max-height: 280px;
+  overflow-y: auto;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  list-style: none;
+  margin: 0;
+  padding: 0.5rem 0;
+  z-index: 1000;
+}
+
+#notif-dropdown-mobile.hidden {
+  display: none;
+}
+
+#notif-dropdown-mobile li {
+  padding: 0.6rem 1rem;
+  font-size: 0.9rem;
+  color: #333;
+  cursor: pointer;
+}
+
+#notif-dropdown-mobile li:hover {
+  background-color: #f5f5f5;
+}
+
+#notif-dropdown-mobile li.unread {
+  background-color: #eef6ff;
+}
+/* ----------------------------------------------------------- */

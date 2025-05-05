@@ -1,0 +1,65 @@
+/* Reset */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  
+  /* Fuente base */
+  body {
+    font-family: Arial, sans-serif;
+    background-color: #f7f8fa;
+    color: #333;
+  }
+  
+  /* Contenedor principal */
+  .admin-container {
+    max-width: 1100px;
+    margin: 3rem auto;
+    padding: 2rem;
+    background-color: #fff;
+    border-radius: 12px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+  }
+  
+  /* Título */
+  .admin-container h1 {
+    font-size: 2rem;
+    margin-bottom: 1.5rem;
+    color: #222;
+  }
+  
+  /* Lista de opciones */
+  .admin-container ul {
+    list-style: none;
+    display: flex;
+    gap: 2rem;
+    flex-wrap: wrap;
+  }
+  
+  .admin-container li {
+    flex: 1 1 250px;
+  }
+  
+  .admin-container a {
+    display: block;
+    text-align: center;
+    padding: 1.2rem 1rem;
+    background-color: #0056b3;
+    color: #fff;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: bold;
+    transition: background-color 0.3s ease;
+  }
+  
+  .admin-container a:hover {
+    background-color: #003d80;
+  }
+  
+  /* Responsive */
+  @media (max-width: 600px) {
+    .admin-container ul {
+      flex-direction: column;
+    }
+  }

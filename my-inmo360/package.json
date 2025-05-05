@@ -1,0 +1,24 @@
+{
+    "name": "my-inmo360",
+    "version": "1.0.0",
+    "description": "Plataforma inmobiliaria para Guatemala",
+    "main": "server.js",
+    "scripts": {
+        "start": "node server.js"
+    },
+    "dependencies": {
+        "bcrypt": "^5.0.1",
+        "body-parser": "^1.20.2",
+        "ejs": "^3.1.9",
+        "express": "^4.18.2",
+        "express-ejs-layouts": "^2.5.1",
+        "express-session": "^1.17.3",
+        "fs-extra": "^11.3.0",
+        "method-override": "^3.0.0",
+        "multer": "^1.4.5-lts.1",
+        "nodemailer": "^7.0.2",
+        "pg": "^8.10.0",
+        "pg-format": "^1.0.4",
+        "uuid": "^11.1.0"
+    }
+}

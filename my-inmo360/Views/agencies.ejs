@@ -1,0 +1,72 @@
+<%- include('partials/header') %>
+<link rel="stylesheet" href="/css/owners.css" />
+<link rel="stylesheet" href="/css/header.css" />
+
+<main class="propietarios-main">
+
+  <!-- Sección 1: Hero -->
+  <section class="hero-section">
+    <div class="hero-left">
+      <h1 class="hero-headline">El negocio de bienes raíces nunca fue tan fácil</h1>
+      <ul class="hero-benefits">
+        <li>Publique su propiedad totalmente gratis</li>
+        <li>Nosotros atraemos los compradores</li>
+        <li>No cobramos ninguna comisión</li>
+      </ul>
+      <a href="#video-intro" class="cta-video">Ver video de introducción</a>
+    </div>
+    <div class="hero-right">
+      <img src="/images/landscape-xela.jpg" alt="Propietarios">
+    </div>
+  </section>
+
+  <!-- Sección 2: Servicios -->
+  <section class="servicios-section">
+    <h2 class="section-headline">¿Qué servicio le interesa usar?</h2>
+    <div class="servicios-grid">
+      <div class="servicio-card">
+        <div class="icono">
+          <img src="/images/icons/rentar-icon.png" alt="Rentar" width="25" height="25">
+        </div>
+        <h3 class="servicio-title">Rentar</h3>
+        <p class="servicio-desc">Rente su propiedad desde Q0.0</p>
+      </div>
+      <div class="servicio-card">
+        <div class="icono">
+          <img src="/images/icons/vender-icon.png" alt="Vender" width="25" height="25">
+        </div>
+        <h3 class="servicio-title">Vender</h3>
+        <p class="servicio-desc">Venda su propiedad desde Q0.0</p>
+      </div>
+      <div class="servicio-card">
+        <a href="/agencias/registro">
+          <div class="icono">
+            <img src="/images/icons/buscar-inmobiliaria-icon.png" alt="Buscar inmobiliaria" width="25" height="25">
+          </div>
+          <h3 class="servicio-title">Registrar mi Inmobiliaria</h3>
+          <p class="servicio-desc">Conecte con cliente potenciales</p>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Sección 3: Newsletter -->
+  <section class="newsletter-section">
+    <div class="newsletter-left">
+      <h2 class="newsletter-headline">Newsletter Inmobiliario: Actualizaciones, tendencias, etc.</h2>
+      <p class="newsletter-desc">
+        Sin palabrería, pero con información actualizada sobre la transición energética, cambios en la legislación y otros temas para propietarios. Periódicamente en tu bandeja de entrada para que no te pierdas lo esencial.
+      </p>
+      <div class="newsletter-form">
+        <input type="email" placeholder="Tu correo electrónico" required>
+        <button class="btn newsletter-btn">Suscribirme</button>
+      </div>
+    </div>
+    <div class="newsletter-right">
+      <img src="/images/icons/email-icon-big.png" alt="Newsletter" width="263" height="263">
+    </div>
+  </section>
+
+</main>
+
+<%- include('partials/footer') %>

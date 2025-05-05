@@ -1,0 +1,155 @@
+<%- include('partials/header') %>
+<head>
+  <link rel="stylesheet" href="/css/agencyForm.css">
+  <link rel="stylesheet" href="/css/header.css">
+</head>
+
+<div class="registro-agencia-container">
+  <h2>Registro de Inmobiliaria</h2>
+  <form action="/agencias/registro" method="POST" enctype="multipart/form-data">
+    <!-- Datos de la inmobiliaria -->
+    <div class="form-group">
+      <label>Nombre de la inmobiliaria</label>
+      <input type="text" name="name" id="name" required>
+      <small id="name-status" style="display:block; margin-top:4px; font-size:0.9rem;"></small>
+    </div>
+    <div class="form-group">
+      <label>Correo electrónico de la inmobiliaria</label>
+      <input type="email" name="email" required>
+    </div>
+    <div class="form-group">
+      <label>Teléfono de la inmobiliaria</label>
+      <input type="text" name="phone">
+    </div>
+    <div class="form-group">
+      <label>Dirección</label>
+      <input type="text" name="address">
+    </div>
+
+    <!-- Departamento y Municipio -->
+    <div class="form-row">
+      <div class="form-group">
+        <label>Departamento</label>
+        <select id="departamento" name="departamento" required>
+          <option value="">Selecciona un departamento</option>
+          <% departamentos.forEach(function(dep) { %>
+            <option value="<%= dep.nombre %>"><%= dep.nombre %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Municipio</label>
+        <select id="municipio" name="municipio" required disabled>
+          <option value="">Selecciona un municipio</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Logo de la inmobiliaria -->
+    <div class="form-group">
+      <label for="logo">Logo de la inmobiliaria</label>
+      <label for="logo" class="custom-file-label">Seleccionar archivo</label>
+      <input type="file" name="logo" id="logo" accept="image/*">
+      <img id="previewLogo" src="#" alt="Preview del logo" style="display: none; width: 120px; height: auto; margin-top: 10px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
+    </div>
+
+    <!-- Datos del solicitante -->
+    <hr>
+    <h3>Información del Solicitante</h3>
+    <div class="form-group">
+      <label>Nombre completo</label>
+      <input type="text" name="solicitante_nombre" required>
+    </div>
+    <div class="form-group">
+      <label>Puesto que ocupa</label>
+      <input type="text" name="solicitante_puesto" required>
+    </div>
+    <div class="form-group">
+      <label>Correo del solicitante</label>
+      <input type="email" name="solicitante_email" required>
+    </div>
+    <div class="form-group">
+      <label>Teléfono del solicitante</label>
+      <input type="text" name="solicitante_telefono" required>
+    </div>
+
+    <button type="submit" class="btn">Enviar solicitud</button>
+  </form>
+</div>
+
+<script>
+  // Preview de logo
+  document.getElementById('logo').addEventListener('change', function(event) {
+    const file = event.target.files[0];
+    const preview = document.getElementById('previewLogo');
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        preview.src = e.target.result;
+        preview.style.display = 'block';
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+
+  // Validar disponibilidad de nombre de inmobiliaria
+  const nameInput = document.getElementById('name');
+  const nameStatus = document.getElementById('name-status');
+  const submitBtn = document.querySelector('button[type="submit"]');
+  let nameTimer;
+  nameInput.addEventListener('input', () => {
+    clearTimeout(nameTimer);
+    nameStatus.textContent = 'Verificando...';
+    nameStatus.style.color = '#333';
+    submitBtn.disabled = true;
+    nameTimer = setTimeout(() => {
+      fetch('/check-agency?name=' + encodeURIComponent(nameInput.value))
+        .then(res => res.json())
+        .then(data => {
+          if (data.available) {
+            nameStatus.textContent = 'Nombre disponible';
+            nameStatus.style.color = 'green';
+            submitBtn.disabled = false;
+          } else {
+            nameStatus.textContent = 'Nombre ya existe';
+            nameStatus.style.color = 'red';
+            submitBtn.disabled = true;
+          }
+        })
+        .catch(() => {
+          nameStatus.textContent = 'Error al verificar';
+          nameStatus.style.color = 'red';
+          submitBtn.disabled = true;
+        });
+    }, 500);
+  });
+
+  // Carga dinámica de municipios por nombre de departamento
+  document.getElementById('departamento').addEventListener('change', function() {
+    const deptName = this.value;
+    const muniSelect = document.getElementById('municipio');
+    muniSelect.innerHTML = '<option value="">Cargando...</option>';
+    muniSelect.disabled = true;
+    if (deptName) {
+      fetch('/municipios?departamento=' + encodeURIComponent(deptName))
+        .then(res => res.json())
+        .then(data => {
+          muniSelect.innerHTML = '<option value="">Selecciona un municipio</option>';
+          data.forEach(m => {
+            const opt = document.createElement('option');
+            opt.value = m.nombre;
+            opt.textContent = m.nombre;
+            muniSelect.appendChild(opt);
+          });
+          muniSelect.disabled = false;
+        })
+        .catch(() => {
+          muniSelect.innerHTML = '<option value="">Error al cargar</option>';
+        });
+    } else {
+      muniSelect.innerHTML = '<option value="">Selecciona un departamento primero</option>';
+    }
+  });
+</script>
+
+<%- include('partials/footer') %>

@@ -1,0 +1,45 @@
+<%- include('partials/header') %>
+<head>
+  <link rel="stylesheet" href="/css/favoritos.css">
+  <link rel="stylesheet" href="/css/header.css">
+</head>
+
+<div class="favorites-page">
+  <h1>Mis Propiedades Favoritas</h1>
+
+  <div class="favorites-container">
+    <% if (propiedades.length === 0) { %>
+      <div class="empty-favorites">
+        <p>No has marcado ninguna propiedad como favorita aún.</p>
+        <a href="/" class="explore-button">Explorar propiedades</a>
+      </div>
+    <% } %>
+
+    <% propiedades.forEach(prop => { 
+         const imagen = prop.imagenes_urls?.[0] || 
+           (typeof prop.imagenes_urls === 'string' ? JSON.parse(prop.imagenes_urls)[0] : '/images/default.jpg');
+         const ubicacion = [prop.zona, prop.municipio, prop.departamento].filter(Boolean).join(', ');
+    %>
+      <div class="property-card favorite-card" onclick="window.location.href='/properties/<%= prop.id %>'">
+        <div class="image-wrapper">
+          <span class="tag-operacion">
+            <%= prop.operacion && ['venta', 'compra'].includes(prop.operacion.toLowerCase()) ? 'Venta' : 'Renta' %>
+          </span>
+          <img src="<%= imagen %>" alt="Imagen propiedad" class="property-img">
+          <div class="overlay">
+            <div class="info">
+              <h3><%= prop.titulo %></h3>
+              <p class="location"><%= ubicacion %></p>
+              <p class="price">Q<%= Number(prop.precio).toLocaleString('es-GT') %></p>
+            </div>
+            <form method="POST" action="/favoritos/<%= prop.id %>?_method=DELETE" onsubmit="event.stopPropagation()">
+              <button type="submit" class="remove-fav" onclick="event.stopPropagation()">Eliminar de favoritos</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    <% }); %>
+  </div>
+</div>
+
+<%- include('partials/footer') %>

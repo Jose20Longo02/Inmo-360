@@ -1,0 +1,179 @@
+<head>
+  <link rel="stylesheet" href="/css/header.css" />
+</head>
+
+<header class="site-header">
+  <div class="header-container">
+    <!-- Logo siempre visible -->
+    <a href="/" class="logo">
+      <img src="/images/inmo360logo.png" alt="INMO360">
+    </a>
+
+    <!-- Desktop Navigation: visible en pantallas grandes -->
+    <div class="desktop-nav">
+      <nav class="main-nav">
+        <ul>
+          <li><a href="/owners">Propietarios</a></li>
+          <li><a href="/agencies">Inmobiliarias</a></li>
+          <li><a href="/acerca-de">Acerca de</a></li>
+          <% if (session.user) { %>
+            <li><a href="/properties">Propiedades</a></li>
+            <li><a href="/favoritos">Favoritos</a></li>
+          <% } %>
+        </ul>
+      </nav>
+      <div class="cta-and-login">
+        <% if (session.user) { %>
+          <!-- Para usuarios logueados en desktop -->
+          <a href="/properties/new" class="cta-button">Publicar una propiedad</a>
+
+          <!-- Botón de notificaciones -->
+          <div id="notif-container" class="notif-container">
+            <button id="notif-button" class="notif-button" aria-label="Notificaciones">
+              🔔
+              <span id="notif-badge" class="notif-badge hidden">0</span>
+            </button>
+            <ul id="notif-dropdown" class="notif-dropdown hidden"></ul>
+          </div>
+
+          <div class="user-menu-container">
+            <a href="#" class="user-panel-button">
+              <img src="<%= session.user.profile_pic %>" alt="Perfil">
+            </a>
+            <div class="user-dropdown">
+              <a href="/dashboard">Editar perfil</a>
+              <a href="/logout">Cerrar sesión</a>
+            </div>
+          </div>
+        <% } else { %>
+          <!-- Para usuarios no logueados -->
+          <a href="/publicar" class="cta-button">Anuncia tu propiedad gratis</a>
+          <a href="/login" class="login-link">Iniciar Sesión</a>
+        <% } %>
+      </div>
+    </div>
+
+    <!-- Mobile Header: visible en pantallas pequeñas -->
+    <div class="mobile-header">
+      <div class="mobile-left">
+        <div class="hamburger-menu">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      </div>
+      <div class="mobile-right">
+        <% if (session.user) { %>
+          <a href="/properties/new" class="cta-button">Publicar</a>
+          <!-- Notificaciones en mobile -->
+          <div id="notif-container-mobile" class="notif-container">
+            <button id="notif-button-mobile" class="notif-button" aria-label="Notificaciones">
+              🔔
+              <span id="notif-badge-mobile" class="notif-badge hidden">0</span>
+            </button>
+            <ul id="notif-dropdown-mobile" class="notif-dropdown hidden"></ul>
+          </div>
+        <% } else { %>
+          <a href="/publicar" class="cta-button">Anuncia</a>
+        <% } %>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile Navigation Desplegable -->
+  <nav class="mobile-nav">
+    <ul>
+      <li><a href="/propietarios">Propietarios</a></li>
+      <li><a href="/inmobiliarias">Inmobiliarias</a></li>
+      <li><a href="/acerca-de">Acerca de</a></li>
+      <% if (session.user) { %>
+        <li><a href="/properties">Propiedades</a></li>
+        <li><a href="/favoritos">Favoritos</a></li>
+        <li><a href="/dashboard">Perfil</a></li>
+        <li><a href="/logout">Salir</a></li>
+      <% } else { %>
+        <li><a href="/login" class="login-link">Iniciar Sesión</a></li>
+      <% } %>
+    </ul>
+  </nav>
+</header>
+
+<!-- Scripts -->
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Menú hamburguesa en Mobile
+    const hamburger = document.querySelector('.hamburger-menu');
+    const mobileNav = document.querySelector('.mobile-nav');
+    hamburger.addEventListener('click', function() {
+      mobileNav.classList.toggle('active');
+    });
+
+    // Menú desplegable para el usuario en Desktop
+    const userMenuContainer = document.querySelector('.user-menu-container');
+    if (userMenuContainer) {
+      const userPanelButton = userMenuContainer.querySelector('.user-panel-button');
+      const userDropdown = userMenuContainer.querySelector('.user-dropdown');
+      userPanelButton.addEventListener('click', function(e) {
+        e.preventDefault();
+        userDropdown.classList.toggle('active');
+      });
+      document.addEventListener('click', function(e) {
+        if (!userMenuContainer.contains(e.target)) {
+          userDropdown.classList.remove('active');
+        }
+      });
+    }
+
+    // Notification Bell Desktop
+    const notifBtn = document.getElementById('notif-button');
+    const notifBadge = document.getElementById('notif-badge');
+    const notifDropdown = document.getElementById('notif-dropdown');
+    fetch('/notifications').then(res => res.json()).then(items => {
+      if (items.length) {
+        const count = items.filter(n => !n.is_read).length;
+        if (count) { notifBadge.textContent = count; notifBadge.classList.remove('hidden'); }
+        notifDropdown.innerHTML = items.map(n => `
+          <li class="${n.is_read ? '' : 'unread'}" data-id="${n.id}" data-link="${n.link}">${n.message}</li>
+        `).join('');
+      }
+    });
+    notifBtn && notifBtn.addEventListener('click', e => { e.stopPropagation(); notifDropdown.classList.toggle('hidden'); });
+    document.addEventListener('click', () => notifDropdown.classList.add('hidden'));
+    notifDropdown && notifDropdown.addEventListener('click', e => {
+      const li = e.target.closest('li[data-id]'); if (!li) return;
+      const id = li.dataset.id, link = li.dataset.link;
+      fetch(`/notifications/${id}/read`, { method: 'POST' }).then(() => {
+        li.classList.remove('unread');
+        let curr = parseInt(notifBadge.textContent || '0', 10) - 1;
+        if (curr > 0) notifBadge.textContent = curr; else notifBadge.classList.add('hidden');
+        window.location.href = link;
+      });
+    });
+
+    // Notification Bell Mobile
+    const notifBtnM = document.getElementById('notif-button-mobile');
+    const notifBadgeM = document.getElementById('notif-badge-mobile');
+    const notifDropdownM = document.getElementById('notif-dropdown-mobile');
+    fetch('/notifications').then(res => res.json()).then(items => {
+      if (items.length) {
+        const count = items.filter(n => !n.is_read).length;
+        if (count) { notifBadgeM.textContent = count; notifBadgeM.classList.remove('hidden'); }
+        notifDropdownM.innerHTML = items.map(n => `
+          <li class="${n.is_read ? '' : 'unread'}" data-id="${n.id}" data-link="${n.link}">${n.message}</li>
+        `).join('');
+      }
+    });
+    notifBtnM && notifBtnM.addEventListener('click', e => { e.stopPropagation(); notifDropdownM.classList.toggle('hidden'); });
+    document.addEventListener('click', () => notifDropdownM.classList.add('hidden'));
+    notifDropdownM && notifDropdownM.addEventListener('click', e => {
+      const li = e.target.closest('li[data-id]'); if (!li) return;
+      const id = li.dataset.id, link = li.dataset.link;
+      fetch(`/notifications/${id}/read`, { method: 'POST' }).then(() => {
+        li.classList.remove('unread');
+        let curr = parseInt(notifBadgeM.textContent || '0', 10) - 1;
+        if (curr > 0) notifBadgeM.textContent = curr; else notifBadgeM.classList.add('hidden');
+        window.location.href = link;
+      });
+    });
+  });
+</script>

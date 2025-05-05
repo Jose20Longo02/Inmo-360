@@ -1,0 +1,177 @@
+/* Reset básico */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  
+  body {
+    font-family: Arial, sans-serif;
+    background: url('/images/landscape-xela.jpg') no-repeat center center fixed;
+    background-size: cover;
+    position: relative;
+    min-height: 100vh;
+  }
+  
+  body::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: rgba(0, 0, 0, 0.6);
+    z-index: 0;
+  }
+
+  hr{
+    margin-top: 10px;
+    margin-bottom: 30px;
+  }
+
+  h3
+  {
+    margin-bottom: 30px;
+  }
+  
+  .registro-agencia-container {
+    position: relative;
+    z-index: 1;
+    max-width: 600px;
+    margin: 3rem auto;
+    padding: 2rem;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
+  }
+  
+  h2 {
+    text-align: center;
+    margin-bottom: 1.5rem;
+    color: black;
+  }
+  
+  .form-group {
+    margin-bottom: 1.2rem;
+  }
+  
+  label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 400;
+    color: #333;
+  }
+  
+  input[type="text"],
+  input[type="email"],
+  input[type="file"],
+  input[type="tel"],
+  textarea {
+    width: 100%;
+    padding: 0.6rem;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 1rem;
+  }
+  
+  input[type="file"] {
+    display: none;
+  }
+  
+  .custom-file-label {
+    display: inline-block;
+    background-color: #75FBD3;
+    color: black;
+    padding: 0.6rem 1.2rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 200;
+    margin-top: 0.5rem;
+  }
+  
+  #previewLogo {
+    max-width: 100%;
+    height: auto;
+    margin-top: 0.8rem;
+    display: block;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+  }
+  
+  .btn {
+    background-color: #75FBD3;
+    color:black;
+    padding: 0.8rem 1.6rem;
+    border: none;
+    border-radius: 6px;
+    font-size: 1rem;
+    cursor: pointer;
+    width: 100%;
+  }
+  
+  .btn:hover {
+    background-color: #4ed7ae;
+  }
+  
+  /* Responsive */
+  @media (max-width: 768px) {
+    .registro-agencia-container {
+      margin: 2rem 1rem;
+      padding: 1.5rem;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .registro-agencia-container {
+      max-width: 90%;
+    }
+  }
+
+
+
+
+  /* Estilo genérico para inputs y textarea (sin flecha) */
+input[type="text"],
+input[type="email"],
+input[type="tel"],
+input[type="file"],
+textarea {
+  width: 100%;
+  padding: 0.6rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 1rem;
+  background-color: #fff;
+}
+
+/* Estilo específico para selects (con flecha) */
+select {
+  width: 100%;
+  padding: 0.6rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 1rem;
+  background-color: #fff;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D'10'%20height%3D'6'%20viewBox%3D'0%200%2010%206'%20xmlns%3D'http://www.w3.org/2000/svg'%3E%3Cpath%20d%3D'M0%200l5%206%205-6z'%20fill%3D'%23666'%2F%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.8rem center;
+  background-size: 10px 6px;
+  cursor: pointer;
+}
+
+/* Flex para mostrar departamento y municipio en la misma línea */
+.form-row {
+  display: flex;
+  gap: 1rem;
+}
+
+/* Cada form-group dentro de .form-row ocupa igual espacio */
+.form-row .form-group {
+  flex: 1;
+}
+
+/* Adaptación a móvil: apilar en una columna */
+@media (max-width: 768px) {
+  .form-row {
+    flex-direction: column;
+  }
+}

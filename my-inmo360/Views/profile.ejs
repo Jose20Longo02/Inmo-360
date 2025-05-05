@@ -1,0 +1,171 @@
+<%- include('partials/header') %>
+<head>
+  <link rel="stylesheet" href="/css/profile.css">
+  <link rel="stylesheet" href="/css/header.css">
+</head>
+
+<div class="profile-edit-container">
+  <h1>Editar Perfil</h1>
+  <form action="/dashboard/profile" method="POST" enctype="multipart/form-data">
+
+    <!-- Asociación a Inmobiliaria -->
+    <div class="form-section">
+      <h2>Asociación a Inmobiliaria</h2>
+      <div class="input-group radios">
+        <label>¿Perteneces a alguna Inmobiliaria?</label>
+        <label>
+          <input type="radio" name="belongsToAgency" value="true" <%= user.belongs_to_agency ? 'checked' : '' %> /> Sí
+        </label>
+        <label>
+          <input type="radio" name="belongsToAgency" value="false" <%= !user.belongs_to_agency ? 'checked' : '' %> /> No
+        </label>
+      </div>
+      <div class="input-group" id="agency-select-group" style="display: none;">
+        <label for="agency">Selecciona tu Inmobiliaria</label>
+        <select name="agency" id="agency">
+          <option value="">-- Elige Inmobiliaria --</option>
+          <% approvedAgencies.forEach(function(a) { %>
+            <option value="<%= a.id %>" <%= user.agency_id === a.id ? 'selected' : '' %>><%= a.name %></option>
+          <% }) %>
+        </select>
+        <p class="small-link">
+          <a href="/agencias/registro">Tu inmobiliaria no está registrada? Regístrala ahora.</a>
+        </p>
+      </div>
+    </div>
+
+    <!-- Datos Personales -->
+    <div class="form-section">
+      <h2>Perfil e información</h2>
+      <div class="input-group">
+        <label for="username">Nombre de usuario</label>
+        <input type="text" id="username" name="username" value="<%= user.username %>" required>
+      </div>
+
+      <div class="input-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" value="<%= user.email %>" required>
+      </div>
+
+      <div class="input-group">
+        <label for="phone">Teléfono</label>
+        <input type="text" id="phone" name="phone" value="<%= user.phone %>" required>
+      </div>
+
+      <div class="input-group">
+        <label for="address">Dirección</label>
+        <input type="text" id="address" name="address" value="<%= user.address %>" required>
+      </div>
+
+      <div class="input-group">
+        <label for="departamento">Departamento</label>
+        <select name="dept" id="departamento" required>
+          <option value="">Departamento</option>
+          <% departamentos.forEach(function(dep) { %>
+            <option value="<%= dep.nombre %>" <%= user.dept === dep.nombre ? 'selected' : '' %>><%= dep.nombre %></option>
+          <% }) %>
+        </select>
+      </div>
+
+      <div class="input-group">
+        <label for="municipio">Ciudad/Municipio</label>
+        <select name="city" id="municipio" required>
+          <option value="">Municipio</option>
+        </select>
+      </div>
+
+      <div class="input-group">
+        <label for="profilePic">Foto de perfil</label>
+        <div id="current-preview">
+          <% if (user.profile_pic) { %>
+            <img src="<%= user.profile_pic %>" alt="Foto de perfil actual" class="preview-img">
+          <% } %>
+        </div>
+        <input type="file" name="profilePic" id="profilePic" accept="image/*">
+        <div id="new-preview"></div>
+      </div>
+    </div>
+
+    <!-- Documentos de Identidad -->
+    <div class="form-section">
+      <h2>Verificación de identidad</h2>
+      <p class="verif-msg">Al subir tus documentos tu perfil será verificado, lo que aumentará la confianza de los clientes.</p>
+
+      <div class="input-group">
+        <label for="idFront">Documento (frente)</label>
+        <% if (user.id_front) { %>
+          <img src="<%= user.id_front %>" alt="Frente ID actual" class="preview-img">
+        <% } %>
+        <input type="file" name="idFront" id="idFront" accept="image/*">
+      </div>
+
+      <div class="input-group">
+        <label for="idBack">Documento (reverso)</label>
+        <% if (user.id_back) { %>
+          <img src="<%= user.id_back %>" alt="Reverso ID actual" class="preview-img">
+        <% } %>
+        <input type="file" name="idBack" id="idBack" accept="image/*">
+      </div>
+    </div>
+
+    <button type="submit" class="btn">Guardar Cambios</button>
+  </form>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Carga dinámica de municipios
+    const deptSelect = document.getElementById('departamento');
+    const munSelect = document.getElementById('municipio');
+    const currentMunicipio = "<%= user.city %>";
+
+    deptSelect.addEventListener('change', async () => {
+      const selectedDept = deptSelect.value;
+      munSelect.innerHTML = '<option value="">Cargando...</option>';
+      try {
+        const res = await fetch(`/municipios?departamento=${encodeURIComponent(selectedDept)}`);
+        const municipios = await res.json();
+        munSelect.innerHTML = '<option value="">Seleccione Municipio</option>';
+        municipios.forEach(mun => {
+          const opt = document.createElement('option');
+          opt.value = mun.nombre;
+          opt.textContent = mun.nombre;
+          if (mun.nombre === currentMunicipio) opt.selected = true;
+          munSelect.appendChild(opt);
+        });
+      } catch (err) {
+        console.error('Error al cargar municipios:', err);
+        munSelect.innerHTML = '<option value="">Error al cargar</option>';
+      }
+    });
+
+    if (deptSelect.value) deptSelect.dispatchEvent(new Event('change'));
+
+    // Preview instantáneo de nueva imagen
+    document.getElementById('profilePic').addEventListener('change', function (e) {
+      const newPrev = document.getElementById('new-preview');
+      const currPrev = document.getElementById('current-preview');
+      newPrev.innerHTML = '';
+      currPrev.innerHTML = '';
+      const file = e.target.files[0];
+      if (file) {
+        const img = document.createElement('img');
+        img.className = 'preview-img';
+        img.src = URL.createObjectURL(file);
+        newPrev.appendChild(img);
+      }
+    });
+
+    // Mostrar/ocultar select de inmobiliaria
+    const belongRadios = document.querySelectorAll('input[name="belongsToAgency"]');
+    const agencyGroup = document.getElementById('agency-select-group');
+    function toggleAgencySelect() {
+      const belongs = document.querySelector('input[name="belongsToAgency"]:checked').value === 'true';
+      agencyGroup.style.display = belongs ? 'block' : 'none';
+    }
+    toggleAgencySelect();
+    belongRadios.forEach(radio => radio.addEventListener('change', toggleAgencySelect));
+  });
+</script>
+
+<%- include('partials/footer') %>

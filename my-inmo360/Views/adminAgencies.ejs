@@ -1,0 +1,55 @@
+<%- include('partials/header') %>
+<head>
+  <link rel="stylesheet" href="/css/adminAgencies.css">
+  <link rel="stylesheet" href="/css/header.css">
+</head>
+
+<div class="admin-container">
+  <h1>Solicitudes de Inmobiliarias</h1>
+
+  <% if (agencies.length > 0) { %>
+    <div class="admin-table">
+      <% agencies.forEach(agency => { %>
+        <div class="admin-card">
+          <div class="admin-card-left">
+            <% if (agency.logo_url) { %>
+              <img src="<%= agency.logo_url %>" alt="Logo de la inmobiliaria" class="agency-logo">
+            <% } else { %>
+              <div class="agency-logo-placeholder">Sin logo</div>
+            <% } %>
+          </div>
+
+          <div class="admin-card-middle">
+            <h2><%= agency.name %></h2>
+            <p><strong>Correo:</strong> <%= agency.email %></p>
+            <p><strong>Teléfono:</strong> <%= agency.phone %></p>
+            <p><strong>Dirección:</strong> <%= agency.address %></p>
+            <p><strong>Departamento:</strong> <%= agency.departamento %></p>
+            <p><strong>Ciudad:</strong> <%= agency.municipio %></p>
+            <hr>
+            <p><strong>Contacto:</strong> <%= agency.solicitante_nombre %> (<%= agency.solicitante_puesto %>)</p>
+            <p><strong>Email de contacto:</strong> <%= agency.solicitante_email %></p>
+            <p><strong>Teléfono de contacto:</strong> <%= agency.solicitante_telefono %></p>
+            <% if (agency.motivo_rechazo) { %>
+              <p><strong>Motivo de rechazo:</strong> <%= agency.motivo_rechazo %></p>
+            <% } %>
+          </div>
+
+          <div class="admin-card-right">
+            <form action="/admin/agencies/<%= agency.id %>/aprobar" method="POST">
+              <button class="btn approve">Aprobar</button>
+            </form>
+            <form action="/admin/agencies/<%= agency.id %>/rechazar" method="POST">
+              <input type="text" name="motivo" placeholder="Motivo del rechazo" required>
+              <button class="btn reject">Rechazar</button>
+            </form>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+  <% } else { %>
+    <p class="no-results-msg">No hay solicitudes pendientes.</p>
+  <% } %>
+</div>
+
+<%- include('partials/footer') %>

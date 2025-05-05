@@ -1,0 +1,113 @@
+<%- include('partials/header') %>
+<head>
+  <link rel="stylesheet" href="/css/properties.css" />
+  <link rel="stylesheet" href="/css/header.css" />
+</head>
+
+<div class="properties-container">
+  <div class="properties-header">
+    <h1 class="page-title">Mis Propiedades</h1>
+    <a href="/properties/new" class="new-property-btn">Crear nueva propiedad</a>
+  </div>
+
+  <% if (propiedades.length === 0) { %>
+    <p class="no-properties">No has creado ninguna propiedad aún.</p>
+  <% } else { %>
+    <div class="properties-grid">
+      <% propiedades.forEach(property => { %>
+        <div class="property-card" onclick="window.location.href='/properties/<%= property.id %>'">
+          <div class="property-image">
+            <% 
+              let images = [];
+              if (property.imagenes_urls) {
+                if (typeof property.imagenes_urls === 'string') {
+                  try { images = JSON.parse(property.imagenes_urls); } catch(e){ images = []; }
+                } else if (Array.isArray(property.imagenes_urls)) {
+                  images = property.imagenes_urls;
+                }
+              }
+              let imageSrc = images.length > 0 ? images[0] : (property.imagen_url || '/images/placeholder.jpg');
+            %>
+            <img src="<%= imageSrc %>" alt="<%= property.titulo %>">
+            <div class="property-badge">
+              <%= property.operacion === 'renta' ? 'Renta' : 'Venta' %>
+            </div>
+            <div class="property-overlay">
+              <h2 class="property-title"><%= property.titulo %></h2>
+              <p class="property-location"><%= property.zona %>, <%= property.municipio %>, <%= property.departamento %></p>
+              <p class="property-price">
+                <% 
+                  const precioNum = parseFloat(property.precio);
+                  const formattedPrice = isNaN(precioNum)
+                    ? property.precio
+                    : 'Q' + precioNum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                %>
+                <%= formattedPrice %>
+                <% if (property.operacion === 'renta') { %> Mensuales <% } %>
+              </p>
+              <div class="property-stats">
+                <div class="stat-item">
+                  <img src="images/icons/view-icon-W.png" alt="Visitas" class="stat-icon">
+                  <span class="stat-value"><%= property.visitas || 0 %></span>
+                </div>
+                <div class="stat-item">
+                  <img src="images/icons/phone-icon-W.png" alt="Teléfono" class="stat-icon">
+                  <span class="stat-value"><%= property.clicks_telefono || 0 %></span>
+                </div>
+                <div class="stat-item">
+                  <img src="images/icons/email-icon-W.png" alt="Email" class="stat-icon">
+                  <span class="stat-value"><%= property.clicks_email || 0 %></span>
+                </div>
+                <div class="stat-item">
+                  <img src="images/icons/Whatsapp-icon-W.png" alt="WhatsApp" class="stat-icon">
+                  <span class="stat-value"><%= property.clicks_whatsapp || 0 %></span>
+                </div>
+              </div>
+              <div class="property-actions">
+                <a href="/properties/edit/<%= property.id %>" class="btn edit-btn">Editar</a>
+                <form action="/properties/delete/<%= property.id %>" method="POST" onsubmit="return confirm('¿Estás seguro de eliminar esta propiedad?');">
+                  <button type="submit" class="btn delete-btn">Eliminar</button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+  <% } %>
+
+  <div class="pagination">
+    <% 
+      const totalPages = Math.ceil(total / limit);
+      const maxPagesToShow = 5;
+      let startPage = Math.max(1, page - Math.floor(maxPagesToShow / 2));
+      let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
+      if (endPage - startPage < maxPagesToShow - 1) {
+        startPage = Math.max(1, endPage - maxPagesToShow + 1);
+      }
+    %>
+  
+    <% if (page > 1) { %>
+      <a href="?page=<%= page - 1 %>&limit=<%= limit %>" class="page-link">«</a>
+    <% } %>
+  
+    <% for (let i = startPage; i <= endPage; i++) { %>
+      <a href="?page=<%= i %>&limit=<%= limit %>" class="page-link <%= i === page ? 'active' : '' %>"><%= i %></a>
+    <% } %>
+  
+    <% if (page < totalPages) { %>
+      <a href="?page=<%= page + 1 %>&limit=<%= limit %>" class="page-link">»</a>
+    <% } %>
+  </div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.delete-btn').forEach(btn => {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation(); // ✋ evita que el contenedor padre reciba el clic
+      });
+    });
+  });
+</script>
+
+<%- include('partials/footer') %>

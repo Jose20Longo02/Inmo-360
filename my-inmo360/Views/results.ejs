@@ -1,0 +1,588 @@
+<%- include('partials/header') %>
+<head>
+  <link rel="stylesheet" href="/css/results.css">
+  <link rel="stylesheet" href="/css/header.css">
+  <link rel="stylesheet" href="/css/styles.css"><!-- para estilos de search-panel -->
+</head>
+
+<%
+  var query = typeof query !== 'undefined' ? query : {};
+
+  // Construir mensaje de resultados dinámico
+  const parts = [];
+  if (query.zona)         parts.push(query.zona);
+  if (query.municipio)    parts.push(query.municipio);
+  if (query.departamento) parts.push(query.departamento);
+  const locationString = parts.length ? ' en ' + parts.join(', ') : '';
+  const summary = total 
+  + ' resultado' 
+  + (total !== 1 ? 's' : '') 
+  + locationString;
+%>
+
+<!-- SECCIÓN: Encabezado de Resultados -->
+<section class="results-header">
+  <div class="results-header__container">
+    <h2 class="results-summary"><%= summary %></h2>
+
+    <!-- BARRA DE BÚSQUEDA HORIZONTAL -->
+    <form class="search-panel" action="/search" method="GET">
+      <div class="form-group">
+        <select name="departamento" id="departamento">
+          <option value="">Departamento</option>
+          <% departamentos.forEach(dep => { %>
+            <option value="<%= dep.nombre %>" <%= query.departamento === dep.nombre ? 'selected' : '' %>><%= dep.nombre %></option>
+          <% }) %>
+        </select>
+      </div>
+    
+      <div class="form-group">
+        <select name="municipio" id="municipio">
+          <option value="">Municipio</option>
+        </select>
+      </div>
+    
+      <div class="form-group">
+        <select name="zona" id="zona">
+          <option value="">Zona</option>
+        </select>
+      </div>
+    
+      <div class="form-group">
+        <select name="tipoPropiedad" id="tipoPropiedad">
+          <option value="">Tipo</option>
+          <option value="casa" <%= query.tipoPropiedad==='casa' ? 'selected' : '' %>>Casa</option>
+          <option value="apartamento" <%= query.tipoPropiedad==='apartamento' ? 'selected' : '' %>>Apartamento</option>
+          <option value="terreno" <%= query.tipoPropiedad==='terreno' ? 'selected' : '' %>>Terreno</option>
+          <option value="bodega" <%= query.tipoPropiedad==='bodega' ? 'selected' : '' %>>Bodega</option>
+          <option value="local comercial" <%= query.tipoPropiedad==='local comercial' ? 'selected' : '' %>>Local comercial</option>
+        </select>
+      </div>
+    
+      <div class="form-group">
+        <select name="operacion" id="operacion">
+          <option value="">Operación</option>
+          <option value="compra" <%= query.operacion==='compra' ? 'selected' : '' %>>Compra</option>
+          <option value="renta" <%= query.operacion==='renta' ? 'selected' : '' %>>Renta</option>
+        </select>
+      </div>
+    
+      <button type="submit" class="btn btn-primary">Buscar</button>
+    </form>
+  </div>
+</section>
+
+<!-- SECCIÓN: Resultados y Filtros Avanzados -->
+<section class="results-section">
+  <div class="results-container">
+    <!-- Botón de toggle para filtros en móviles -->
+    <div class="mobile-filters-toggle">
+      <button id="toggleFilters" class="btn apply-filters-btn">Filtros Avanzados</button>
+    </div>
+    
+<!-- PANEL DE FILTROS AVANZADOS -->
+<aside class="filters-panel">
+  <h3>Filtros Avanzados</h3>
+  <form class="filters-form" action="/advanced-filters" method="POST">
+    <!-- Campos ocultos de la búsqueda base -->
+    <input type="hidden" name="departamento"   value="<%= query.departamento   || '' %>">
+    <input type="hidden" name="municipio"      value="<%= query.municipio      || '' %>">
+    <input type="hidden" name="zona"           value="<%= query.zona           || '' %>">
+    <input type="hidden" name="tipoPropiedad"  value="<%= query.tipoPropiedad  || '' %>">
+    <input type="hidden" name="operacion"      value="<%= query.operacion      || '' %>">
+
+    <!-- Precio -->
+    <div class="filter-group">
+      <label>Precio</label>
+      <div class="range-fields">
+        <input type="text" name="precioMin" id="precioMin" placeholder="Min"
+               value="<%= query.precioMin ? ('Q' + parseFloat(query.precioMin).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})) : '' %>">
+        <input type="text" name="precioMax" id="precioMax" placeholder="Max"
+               value="<%= query.precioMax ? ('Q' + parseFloat(query.precioMax).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})) : '' %>">
+      </div>
+    </div>
+
+    <% if (query.tipoPropiedad === 'casa' || query.tipoPropiedad === 'apartamento') { %>
+      <!-- Habitaciones -->
+      <div class="filter-group">
+        <label>Habitaciones</label>
+        <div class="range-fields">
+          <input type="number" name="habitacionesMin" placeholder="Min" value="<%= query.habitacionesMin || '' %>">
+          <input type="number" name="habitacionesMax" placeholder="Max" value="<%= query.habitacionesMax || '' %>">
+        </div>
+      </div>
+      <!-- Baños -->
+      <div class="filter-group">
+        <label>Baños</label>
+        <div class="range-fields">
+          <input type="number" name="banosMin" placeholder="Min" value="<%= query.banosMin || '' %>">
+          <input type="number" name="banosMax" placeholder="Max" value="<%= query.banosMax || '' %>">
+        </div>
+      </div>
+      <!-- m² de Construcción -->
+      <div class="filter-group">
+        <label>m² de Construcción</label>
+        <div class="range-fields">
+          <input type="number" name="m2ConstruccionMin" placeholder="Min" value="<%= query.m2ConstruccionMin || '' %>">
+          <input type="number" name="m2ConstruccionMax" placeholder="Max" value="<%= query.m2ConstruccionMax || '' %>">
+        </div>
+      </div>
+      <!-- Características generales -->
+      <div class="filter-group">
+        <label>Características</label>
+        <div class="checkbox-group">
+          <label><input type="checkbox" name="amueblada" value="true" <%= query.amueblada ? 'checked' : '' %>> Amueblada</label>
+          <label><input type="checkbox" name="semiAmueblada" value="true" <%= query.semiAmueblada ? 'checked' : '' %>> Semi Amueblada</label>
+          <label><input type="checkbox" name="residencial" value="true" <%= query.residencial ? 'checked' : '' %>> Dentro de residencial/condominio</label>
+          <label><input type="checkbox" name="seguridad24" value="true" <%= query.seguridad24 ? 'checked' : '' %>> Seguridad 24 hrs</label>
+        </div>
+      </div>
+      <!-- Lujo -->
+      <div class="filter-group luxury-filter">
+        <label><input type="checkbox" id="luxoFilter" name="luxo" value="true" <%= query.luxo ? 'checked' : '' %>> Solo propiedades de lujo</label>
+        <div class="luxury-options<%= query.luxo ? ' active' : '' %>">
+          <label><input type="checkbox" name="piscina_privada" value="true" <%= query.piscina_privada ? 'checked' : '' %>> Piscina Privada</label>
+          <label><input type="checkbox" name="jacuzzi" value="true" <%= query.jacuzzi ? 'checked' : '' %>> Jacuzzi</label>
+          <label><input type="checkbox" name="sauna_seco" value="true" <%= query.sauna_seco ? 'checked' : '' %>> Sauna Seco</label>
+          <label><input type="checkbox" name="sauna_humedo" value="true" <%= query.sauna_humedo ? 'checked' : '' %>> Sauna Húmedo</label>
+          <label><input type="checkbox" name="vistas_panoramicas" value="true" <%= query.vistas_panoramicas ? 'checked' : '' %>> Vistas Panorámicas</label>
+          <label><input type="checkbox" name="cancha_futbol" value="true" <%= query.cancha_futbol ? 'checked' : '' %>> Cancha de fútbol</label>
+          <label><input type="checkbox" name="cancha_basket" value="true" <%= query.cancha_basket ? 'checked' : '' %>> Cancha de basketball</label>
+        </div>
+      </div>
+    <% } else if (query.tipoPropiedad === 'terreno') { %>
+      <!-- Terrenos -->
+      <div class="filter-group">
+        <label>Tamaño de terreno</label>
+        <div class="range-fields">
+          <input type="number" name="tamanoTerrenoMin" placeholder="Min" value="<%= query.tamanoTerrenoMin || '' %>">
+          <input type="number" name="tamanoTerrenoMax" placeholder="Max" value="<%= query.tamanoTerrenoMax || '' %>">
+        </div>
+      </div>
+      <div class="filter-group">
+        <label>Metros de frente</label>
+        <div class="range-fields">
+          <input type="number" name="metrosFrenteMin" placeholder="Min" value="<%= query.metrosFrenteMin || '' %>">
+          <input type="number" name="metrosFrenteMax" placeholder="Max" value="<%= query.metrosFrenteMax || '' %>">
+        </div>
+      </div>
+      <div class="filter-group">
+        <label>Características</label>
+        <div class="checkbox-group">
+          <label><input type="checkbox" name="orillaCalle" value="true" <%= query.orillaCalle ? 'checked' : '' %>> Orilla de calle principal</label>
+          <label><input type="checkbox" name="orillaCarretera" value="true" <%= query.orillaCarretera ? 'checked' : '' %>> Orilla de carretera principal</label>
+        </div>
+      </div>
+    <% } else if (query.tipoPropiedad === 'bodega') { %>
+      <!-- Bodegas -->
+      <!-- Bodegas -->
+      <div class="filter-group">
+        <label>Tamaño total (m²)</label>
+        <div class="range-fields">
+          <input type="number" name="bodegaTamanoMin" placeholder="Min" value="<%= query.bodegaTamanoMin || '' %>">
+          <input type="number" name="bodegaTamanoMax" placeholder="Max" value="<%= query.bodegaTamanoMax || '' %>">
+        </div>
+      </div>
+      <div class="filter-group">
+        <label>Altura (m)</label>
+        <div class="range-fields">
+          <input type="number" name="bodegaAlturaMin" placeholder="Min" value="<%= query.bodegaAlturaMin || '' %>">
+          <input type="number" name="bodegaAlturaMax" placeholder="Max" value="<%= query.bodegaAlturaMax || '' %>">
+        </div>
+      </div>
+      <div class="filter-group">
+        <label>Características</label>
+        <div class="checkbox-group">
+          <label><input type="checkbox" name="complejoBodegas" value="true" <%= query.complejoBodegas ? 'checked' : '' %>> Dentro de complejo</label>
+          <label><input type="checkbox" name="seguridad24" value="true" <%= query.seguridad24 ? 'checked' : '' %>> Seguridad 24 hrs</label>
+          <label><input type="checkbox" name="cuentaOficina" value="true" <%= query.cuentaOficina ? 'checked' : '' %>> Con oficina</label>
+          <label><input type="checkbox" name="cuentaBanio" value="true" <%= query.cuentaBanio ? 'checked' : '' %>> Con baño</label>
+          <label><input type="checkbox" name="orillaAutopista" value="true" <%= query.orillaAutopista ? 'checked' : '' %>> Está a orilla de carretera/autopista</label> <!-- 👈 AÑADIDO de nuevo -->
+        </div>
+      </div>
+    <% } else if (query.tipoPropiedad === 'local comercial') { %>
+      <!-- Locales comerciales -->
+      <div class="filter-group">
+        <label>Tamaño total (m²)</label>
+        <div class="range-fields">
+          <input type="number" name="localTamanoMin" placeholder="Min" value="<%= query.localTamanoMin || '' %>">
+          <input type="number" name="localTamanoMax" placeholder="Max" value="<%= query.localTamanoMax || '' %>">
+        </div>
+      </div>
+      <div class="filter-group">
+        <label>Características</label>
+        <div class="checkbox-group">
+          <label><input type="checkbox" name="plaza" value="true" <%= query.plaza ? 'checked' : '' %>> Dentro de centro comercial</label>
+          <label><input type="checkbox" name="bano_propio" value="true" <%= query.bano_propio ? 'checked' : '' %>> Baño propio</label>
+        </div>
+      </div>
+    <% } else { %>
+      <p>Seleccione el tipo de propiedad en su búsqueda para ver filtros avanzados.</p>
+    <% } %>
+
+    <!-- Botones de acción -->
+    <div class="filter-actions">
+      <button type="submit" class="btn apply-filters-btn">Aplicar Filtros</button>
+      <button type="button" id="clearAdvanced" class="btn clear-filters-btn">Limpiar Filtros</button>
+    </div>
+  </form>
+</aside>
+
+    
+    <!-- LISTADO DE RESULTADOS -->
+    <div class="results-list">
+      <% if (propiedades.length > 0) { %>
+        <% propiedades.forEach(prop => {
+             let imageSrc = '/images/placeholder.jpg';
+             if (Array.isArray(prop.imagenes_urls) && prop.imagenes_urls.length) {
+               imageSrc = prop.imagenes_urls[0];
+             } else if (typeof prop.imagenes_urls === 'string') {
+               try {
+                 const arr = JSON.parse(prop.imagenes_urls);
+                 if (Array.isArray(arr) && arr.length) imageSrc = arr[0];
+               } catch(e){}
+             } else if (prop.imagen_url) {
+               imageSrc = prop.imagen_url;
+             }
+             const descriptionPreview = prop.descripcion
+               ? (prop.descripcion.length > 60
+                   ? prop.descripcion.substring(0,60) + '...'
+                   : prop.descripcion)
+               : '';
+             const precioNum = parseFloat(prop.precio);
+             const formattedPrice = isNaN(precioNum)
+               ? prop.precio
+               : 'Q' + precioNum.toLocaleString('en-US', {
+                   minimumFractionDigits: 2,
+                   maximumFractionDigits: 2
+                 });
+        %>
+        <article class="result-card <%= prop.luxo ? 'luxury-property' : '' %>">
+          <!-- Header del anunciante -->
+          <div class="card-header">
+            <div class="left">
+              <% if (prop.logo_inmobiliaria) { %>
+                <img src="<%= prop.logo_inmobiliaria %>" alt="Logo inmobiliaria">
+              <% } else if (!prop.belongs_to_agency) { %>
+                <span class="no-agency">No pertenece a ninguna inmobiliaria</span>
+              <% } %>
+            </div>
+            <div class="right">
+              <div class="info">
+                <strong><%= prop.user_name || 'Usuario Anónimo' %></strong><br>
+                <span><%= prop.departamento || '' %></span>
+              </div>
+              <img src="<%= prop.user_profile_pic || '/images/icons/user-default.png' %>" alt="Usuario">
+            </div>
+          </div>
+
+          <!-- Imagen de la propiedad -->
+          <div class="result-card__image">
+            <div class="property-badge">
+              <%= prop.operacion === 'renta' ? 'Renta' : 'Venta' %>
+            </div>
+            <img src="<%= imageSrc %>" alt="<%= prop.titulo %>">
+          </div>
+
+          <!-- Contenido -->
+          <div class="card-details">
+            <div class="left-column">
+              <h3 class="result-card__title"><%= prop.titulo %></h3>
+              <p class="result-location">
+                <%= prop.zona || '' %><%= prop.zona ? ', ' : '' %><%= prop.municipio || '' %><%= prop.municipio ? ', ' : '' %><%= prop.departamento || '' %>
+              </p>
+              <p class="property-price">
+                <%= formattedPrice %><%= prop.operacion === 'renta' ? ' Mensuales' : '' %>
+              </p>
+
+
+              <div class="property-characteristics">
+                <% if (prop.tipo_propiedad === 'casa' || prop.tipo_propiedad === 'apartamento') { %>
+                  <% if (prop.habitaciones) { %>
+                    <div class="characteristic-item">
+                      <img src="/images/icons/bed-icon.png"><span><%= prop.habitaciones %></span>
+                    </div>
+                  <% } %>
+                  <% if (prop.banos) { %>
+                    <div class="characteristic-item">
+                      <img src="/images/icons/baños-icon.png"><span><%= prop.banos %></span>
+                    </div>
+                  <% } %>
+                <% } else if (prop.tipo_propiedad === 'terreno') { %>
+                  <% if (prop.tamano_terreno) { %>
+                    <div class="characteristic-item">
+                      <img src="/images/icons/tamaño-icon.png"><span><%= prop.tamano_terreno %> m²</span>
+                    </div>
+                  <% } %>
+
+                  <% 
+                    var tieneFrente = false;
+                    if (prop.caracteristicas_terreno) {
+                      var caracteristicas = prop.caracteristicas_terreno;
+                      if (typeof caracteristicas === 'string') {
+                        caracteristicas = caracteristicas.replace(/"/g, '').replace('[','').replace(']','').split(',');
+                      }
+                      if (Array.isArray(caracteristicas)) {
+                        tieneFrente = caracteristicas.includes('orilla_calle') || caracteristicas.includes('orilla_carretera');
+                      }
+                    }
+                  %>
+                  <% if (tieneFrente && prop.metros_frente) { %>
+                    <div class="characteristic-item">
+                      <img src="/images/icons/tamaño-icon.png"><span><%= prop.metros_frente %> m frente</span>
+                    </div>
+                  <% } %>
+
+                <% } else if (prop.tipo_propiedad === 'bodega') { %>
+                  <% if (prop.bodega_tamano) { %>
+                    <div class="characteristic-item">
+                      <img src="/images/icons/tamaño-icon.png"><span><%= prop.bodega_tamano %> m²</span>
+                    </div>
+                  <% } %>
+                  <% if (prop.bodega_altura) { %>
+                    <div class="characteristic-item">
+                      <img src="/images/icons/altura-icon.png"><span><%= prop.bodega_altura %> m altura</span>
+                    </div>
+                  <% } %>
+                <% } else if (prop.tipo_propiedad === 'local comercial') { %>
+                  <% if (prop.local_tamano) { %>
+                    <div class="characteristic-item">
+                      <img src="/images/icons/local-icon.png"><span><%= prop.local_tamano %> m²</span>
+                    </div>
+                  <% } %>
+                <% } %>
+              </div>
+            </div>
+
+            <div class="right-column-actions">
+              <% if (session && session.user) { %>
+                <button 
+                  class="btn-heart <%= prop.is_favorite ? 'active' : '' %>" 
+                  data-id="<%= prop.id %>"
+                  data-luxury="<%= prop.luxo ? 'true' : 'false' %>">
+                  <img 
+                    src="/images/icons/<%= prop.luxo 
+                      ? (prop.is_favorite ? 'heart-filled-gold.png' : 'heart-empty-gold.png') 
+                      : (prop.is_favorite ? 'heart-filled-icon.png' : 'heart-empty-icon.png') %>" 
+                    alt="Favorito" 
+                    class="heart-icon">
+                </button>
+              <% } else { %>
+                <button onclick="window.location='/login'" class="btn-heart" data-luxury="<%= prop.luxo ? 'true' : 'false' %>">
+                  <img 
+                    src="/images/icons/<%= prop.luxo 
+                      ? 'heart-empty-gold.png' 
+                      : 'heart-empty-icon.png' %>" 
+                    alt="Favorito" 
+                    class="heart-icon">
+                </button>
+              <% } %>
+              <a href="/properties/<%= prop.id %>" class="btn-view-more <%= prop.luxo ? 'luxury-button' : '' %>">Ver más</a>
+            </div>
+          </div>
+        </article>
+        <% }); %>
+      <% } else { %>
+        <p class="no-results-msg">No se encontraron resultados</p>
+      <% } %>
+    </div>
+    
+  </div>
+</section>
+<!-- PAGINACIÓN -->
+<% if (total > limit) { %>
+  <div class="pagination">
+    <% 
+      const totalPages = Math.ceil(total / limit);
+      const maxPagesToShow = 6;
+      let startPage = Math.max(1, page - Math.floor(maxPagesToShow / 2));
+      let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
+      if (endPage - startPage < maxPagesToShow - 1) {
+        startPage = Math.max(1, endPage - maxPagesToShow + 1);
+      }
+    %>
+
+    <% if (page > 1) { %>
+      <a href="?<%= new URLSearchParams({ ...query, page: page - 1 }).toString() %>" class="page-link">«</a>
+    <% } %>
+
+    <% for (let i = startPage; i <= endPage; i++) { %>
+      <a href="?<%= new URLSearchParams({ ...query, page: i }).toString() %>" class="page-link <%= i === page ? 'active' : '' %>"><%= i %></a>
+    <% } %>
+
+    <% if (page < totalPages) { %>
+      <a href="?<%= new URLSearchParams({ ...query, page: page + 1 }).toString() %>" class="page-link">»</a>
+    <% } %>
+  </div>
+<% } %>
+
+  </div>
+</section>
+
+<script>
+  document.querySelectorAll('.btn-heart').forEach(btn => {
+  btn.addEventListener('click', async (e) => {
+    e.preventDefault();
+
+    const propiedadId = btn.dataset.id;
+    const img = btn.querySelector('img');
+    const isLuxury = btn.dataset.luxury === 'true';
+
+    if (!propiedadId) {
+      window.location.href = '/login';
+      return;
+    }
+
+    const wasFavorite = btn.classList.contains('active'); // GUARDAMOS estado original
+    const method = wasFavorite ? 'DELETE' : 'POST';
+
+    try {
+      const res = await fetch(`/favoritos/${propiedadId}`, {
+        method,
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      if (res.status === 401) {
+        window.location.href = '/login';
+        return;
+      }
+
+      const data = await res.json();
+      if (data.success) {
+
+        // 🔥 Antes de cambiar clases, actualizamos el icono basado en wasFavorite
+        if (isLuxury) {
+          img.src = wasFavorite 
+            ? '/images/icons/heart-empty-gold.png' 
+            : '/images/icons/heart-filled-gold.png';
+        } else {
+          img.src = wasFavorite 
+            ? '/images/icons/heart-empty-icon.png' 
+            : '/images/icons/heart-filled-icon.png';
+        }
+
+        // 🔥 Ahora sí cambiamos la clase
+        btn.classList.toggle('active');
+      }
+    } catch (err) {
+      console.error('Error al marcar/desmarcar favorito', err);
+    }
+  });
+});
+
+  document.addEventListener('DOMContentLoaded', function() {
+    const clearBtn = document.getElementById('clearAdvanced');
+    const form     = document.querySelector('.filters-form');
+
+    clearBtn.addEventListener('click', function() {
+      // Limpiar todos los inputs de número y texto
+      form.querySelectorAll('input[type="number"], input[type="text"]').forEach(el => el.value = '');
+      // Restaurar selects a la primera opción
+      form.querySelectorAll('select').forEach(el => el.selectedIndex = 0);
+      // Desmarcar todos los checkboxes
+      form.querySelectorAll('input[type="checkbox"]').forEach(el => el.checked = false);
+      // Ocultar opciones de lujo si están visibles
+      const luxuryOptions = form.querySelector('.luxury-options');
+      if (luxuryOptions) luxuryOptions.style.display = 'none';
+      // **Reenviar el formulario de búsqueda inicial para recordar los filtros base**
+      document.querySelector('.search-panel').submit();
+    });
+  });
+
+  document.addEventListener("DOMContentLoaded", function() {
+    // Toggle filtros móviles
+    const toggleBtn = document.getElementById("toggleFilters");
+    const filtersPanel = document.querySelector(".filters-panel");
+    if (toggleBtn && filtersPanel) {
+      toggleBtn.addEventListener("click", function() {
+        const shown = filtersPanel.style.display === "block";
+        filtersPanel.style.display = shown ? "none" : "block";
+        toggleBtn.textContent = shown ? "Filtros Avanzados" : "Ocultar Filtros";
+      });
+    }
+    // Toggle lujo
+    const luxoFilter = document.getElementById("luxoFilter");
+    const luxuryOptions = document.querySelector(".luxury-options");
+    if (luxoFilter && luxuryOptions) {
+      luxoFilter.addEventListener("change", () => {
+        luxuryOptions.style.display = luxoFilter.checked ? "block" : "none";
+      });
+    }
+    // Carga dinámica de municipios/zonas
+    const selDept = document.getElementById('departamento');
+    const selMun  = document.getElementById('municipio');
+    const selZona = document.getElementById('zona');
+    function loadMunicipios(dept){
+      selMun.innerHTML = '<option value="">Municipio</option>';
+      selZona.innerHTML = '<option value="">Zona</option>';
+      if(!dept) return;
+      fetch(`/municipios?departamento=${encodeURIComponent(dept)}`)
+        .then(r=>r.json()).then(list=>{
+          list.forEach(m=>{
+            const name = m.nombre || m;
+            const opt = document.createElement('option');
+            opt.value = name; opt.text = name;
+            if(name===`<%= query.municipio %>`) opt.selected = true;
+            selMun.appendChild(opt);
+          });
+        });
+    }
+    function loadZonas(dept, mun){
+      selZona.innerHTML = '<option value="">Zona</option>';
+      if(!dept||!mun) return;
+      fetch(`/zonas?departamento=${encodeURIComponent(dept)}&municipio=${encodeURIComponent(mun)}`)
+        .then(r=>r.json()).then(list=>{
+          list.forEach(z=>{
+            const opt = document.createElement('option');
+            opt.value = z; opt.text = z;
+            if(z===`<%= query.zona %>`) opt.selected = true;
+            selZona.appendChild(opt);
+          });
+        });
+    }
+    selDept.addEventListener('change', ()=> loadMunicipios(selDept.value));
+    selMun.addEventListener('change', ()=> loadZonas(selDept.value, selMun.value));
+    if('<%= query.departamento %>') loadMunicipios('<%= query.departamento %>');
+    if('<%= query.municipio %>')  loadZonas('<%= query.departamento %>','<%= query.municipio %>');
+  });
+
+  // Formato de moneda para precioMin y precioMax
+  document.addEventListener("DOMContentLoaded", function() {
+    const priceInputs = [
+      document.getElementById('precioMin'),
+      document.getElementById('precioMax')
+    ].filter(Boolean);
+
+    priceInputs.forEach(input => {
+      input.addEventListener('focus', () => {
+        let val = input.value.replace(/^Q\s*/, '').replace(/,/g, '');
+        input.value = val;
+      });
+      input.addEventListener('blur', () => {
+        let raw = input.value.replace(/^Q\s*/, '').replace(/,/g, '').trim();
+        if (raw === '') return;
+        const num = parseFloat(raw);
+        if (isNaN(num)) {
+          input.value = '';
+        } else {
+          input.value = 'Q' + num.toLocaleString('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+          });
+        }
+      });
+    });
+
+    // Antes de enviar filtros, limpiamos Q y comas
+    const filtersForm = document.querySelector('.filters-form');
+    if (filtersForm) {
+      filtersForm.addEventListener('submit', function() {
+        priceInputs.forEach(input => {
+          input.value = input.value.replace(/^Q\s*/, '').replace(/,/g, '').trim();
+        });
+      });
+    }
+  });
+</script>
+
+<%- include('partials/footer') %>

@@ -1,0 +1,199 @@
+/* Reset */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: Arial, sans-serif;
+}
+
+
+/* propertydetail.css */
+.property-detail-container {
+  max-width: 1200px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+  color: #000;
+  }
+  
+  /* Two‑column main layout */
+  .detail-main {
+  display: flex;
+  gap: 2rem;
+  }
+  
+  /* Slider */
+  .slider-container {
+  flex: 2;
+  position: relative;
+  }
+  .slider {
+  position: relative;
+  overflow: hidden;
+  height: 500px;
+  border-radius: 8px;
+  }
+  .slide {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  opacity: 0;
+  transition: opacity 0.5s;
+  }
+  .slide.active { opacity: 1; }
+  .slide img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  }
+  .slider-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0,0,0,0.4);
+  color: #fff;
+  border: none;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  font-size: 1.5rem;
+  border-radius: 4px;
+  }
+  .slider-btn.prev { left: 1rem; }
+  .slider-btn.next { right: 1rem; }
+  .slide-count {
+  margin-top: 0.5rem;
+  font-weight: bold;
+  text-align: center;
+  }
+  
+  /* Contact panel */
+  .contact-panel {
+  flex: 1;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 1rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  text-align: center;
+  }
+  .contact-panel h2 {
+  margin-bottom: 1rem;
+  font-size: 1.2rem;
+  }
+  .contact-info {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  }
+  .contact-info img {
+  width: 80px; height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #75FBD3;
+  }
+  .agent-details {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: left;
+  }
+  .agent-details h3,
+  .agent-details p {
+  margin: 0.2rem 0;
+  }
+  
+  .contact-panel .btn {
+  width: 100%;
+  margin-bottom: 0.5rem;
+  }
+  
+  /* Action buttons */
+  .detail-actions {
+  display: flex;
+  gap: 1rem;
+  margin: 2rem 0 1rem;
+  justify-content: flex-start;
+  }
+  .btn {
+  padding: 0.7rem 1.2rem;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.3s;
+  }
+  .btn.primary {
+  background-color: #75FBD3;
+  color: #000;
+  border: none;
+  }
+  .btn.primary:hover {
+  background-color: #5ae6c4;
+  }
+  .btn.outline {
+  background: transparent;
+  border: 2px solid #75FBD3;
+  color: #75FBD3;
+  }
+  .btn.outline:hover {
+  background-color: #75FBD3;
+  color: #000;
+  }
+  
+  /* Description & sidebar */
+  .detail-content {
+  display: flex;
+  gap: 2rem;
+  }
+  .description-section {
+  flex: 2;
+  }
+  .description-section h1 {
+  margin-bottom: 0.5rem;
+  }
+  .location {
+  color: #666;
+  margin-bottom: 0.5rem;
+  }
+  .price {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+  }
+  .description-section .description {
+  line-height: 1.6;
+  }
+  
+  /* Info box */
+  .info-box {
+  flex: 1;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 1rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  }
+  .info-box h3 {
+  margin-bottom: 1rem;
+  }
+  .info-box ul {
+  list-style: none;
+  padding: 0;
+  width: 100%;
+  }
+  .info-box li {
+  margin-bottom: 0.8rem;
+  font-size: 0.95rem;
+  text-align: center;
+  }
+  
+  /* Responsive */
+  @media (max-width: 900px) {
+  .detail-main {
+  flex-direction: column;
+  }
+  .detail-content {
+  flex-direction: column;
+  }
+  }

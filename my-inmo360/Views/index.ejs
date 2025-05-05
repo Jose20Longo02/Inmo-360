@@ -1,0 +1,202 @@
+<%- include('partials/header') %>
+<head>
+  <link rel="stylesheet" href="/css/styles.css" />
+  <link rel="stylesheet" href="/css/header.css" />
+</head>
+
+<section class="hero">
+  <img class="hero__background" src="/images/hero.jpg" alt="Hero Background">
+  <div class="hero__overlay"></div>
+  <div class="hero__content">
+    <form class="search-panel" action="/search" method="POST">
+      <div class="form-group">
+        <select name="departamento" id="departamento">
+          <option value="">Departamento</option>
+          <% departamentos.forEach(dep => { %>
+            <option value="<%= dep.nombre %>"><%= dep.nombre %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="form-group">
+        <select name="municipio" id="municipio">
+          <option value="">Municipio</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <select name="zona" id="zona">
+          <option value="">Zona</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <select name="tipoPropiedad" id="tipoPropiedad">
+          <option value="">Tipo</option>
+          <option value="casa">Casa</option>
+          <option value="apartamento">Apartamento</option>
+          <option value="terreno">Terreno</option>
+          <option value="bodega">Bodega</option>
+          <option value="local comercial">Local comercial</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <select name="operacion" id="operacion">
+          <option value="">Operación</option>
+          <option value="compra">Compra</option>
+          <option value="renta">Renta</option>
+        </select>
+      </div>
+      <button type="submit" class="btn">Buscar</button>
+    </form>
+  </div>
+</section>
+
+<% if (hasRecommended) { %>
+  <section class="properties">
+    <div class="container">
+      <h2>Nuestra selección de propiedades</h2>
+      <p>Elige entre una selección personalizada de propiedades para cada necesidad.</p>
+
+      <div class="carousel-wrapper">
+        <button class="carousel-btn left" onclick="scrollCarousel(-1)">&#10094;</button>
+        <div class="properties__carousel" id="carouselContainer">
+          <% recommendedProperties.forEach(prop => {
+              let imageSrc = 'https://picsum.photos/300/200?random=99';
+              if (Array.isArray(prop.imagenes_urls) && prop.imagenes_urls.length) {
+                imageSrc = prop.imagenes_urls[0];
+              } else if (typeof prop.imagenes_urls === 'string') {
+                try {
+                  const imgs = JSON.parse(prop.imagenes_urls);
+                  if (Array.isArray(imgs) && imgs.length) {
+                    imageSrc = imgs[0];
+                  }
+                } catch (e) {}
+              } else if (prop.imagen_url) {
+                imageSrc = prop.imagen_url;
+              }
+
+              const isResidencial = prop.tipo_propiedad === 'casa' || prop.tipo_propiedad === 'apartamento';
+              const isTerreno = prop.tipo_propiedad === 'terreno';
+              const isBodega = prop.tipo_propiedad === 'bodega';
+              const isLocal = prop.tipo_propiedad === 'local comercial';
+          %>
+          <a href="/properties/<%= prop.id %>" class="property-card" style="background-image: url('<%= imageSrc %>')">
+            <span class="property-badge"><%= prop.operacion === 'renta' ? 'Renta' : 'Venta' %></span>
+            <div class="property-overlay">
+              <h3 class="property-title"><%= prop.titulo %></h3>
+              <div class="property-characteristics">
+                <% if (isResidencial) { %>
+                  <% if (prop.habitaciones) { %>
+                    <div class="characteristic-item">
+                      <img src="/images/icons/bed-icon-W.png" alt="Habitaciones" width="16">
+                      <span><%= prop.habitaciones %></span>
+                    </div>
+                  <% } %>
+                  <% if (prop.banos) { %>
+                    <div class="characteristic-item">
+                      <img src="/images/icons/baños-icon-W.png" alt="Baños" width="16">
+                      <span><%= prop.banos %></span>
+                    </div>
+                  <% } %>
+                <% } else if (isTerreno && prop.tamano_terreno) { %>
+                  <div class="characteristic-item">
+                    <img src="/images/icons/tamaño-icon-W.png" alt="Terreno" width="16">
+                    <span><%= prop.tamano_terreno %> m²</span>
+                  </div>
+                <% } else if (isBodega) { %>
+                  <% if (prop.bodega_tamano) { %>
+                    <div class="characteristic-item">
+                      <img src="/images/icons/tamaño-icon-W.png" alt="Tamaño Bodega" width="16">
+                      <span><%= prop.bodega_tamano %> m²</span>
+                    </div>
+                  <% } %>
+                  <% if (prop.bodega_altura) { %>
+                    <div class="characteristic-item">
+                      <img src="/images/icons/altura-icon.png" alt="Altura" width="16">
+                      <span><%= prop.bodega_altura %> m</span>
+                    </div>
+                  <% } %>
+                  <% if (prop.cantidad_banos) { %>
+                    <div class="characteristic-item">
+                      <img src="/images/icons/baños-icon-W.png" alt="Baños" width="16">
+                      <span><%= prop.cantidad_banos %></span>
+                    </div>
+                  <% } %>
+                <% } else if (isLocal) { %>
+                  <% if (prop.local_tamano) { %>
+                    <div class="characteristic-item">
+                      <img src="/images/icons/tamaño-icon-W.png" alt="Tamaño Local" width="16">
+                      <span><%= prop.local_tamano %> m²</span>
+                    </div>
+                  <% } %>
+                  <% if (prop.cantidad_banos) { %>
+                    <div class="characteristic-item">
+                      <img src="/images/icons/baños-icon-W.png" alt="Baños" width="16">
+                      <span><%= prop.cantidad_banos %></span>
+                    </div>
+                  <% } %>
+                <% } %>
+              </div>
+              <div class="price-tag">
+                Q<%= parseFloat(prop.precio).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %>
+              </div>
+            </div>
+          </a>
+          <% }); %>
+        </div>
+        <button class="carousel-btn right" onclick="scrollCarousel(1)">&#10095;</button>
+      </div>
+    </div>
+  </section>
+<% } %>
+
+<section class="features">
+  <div class="container">
+    <h2>Hecho para usted</h2>
+    <p>Descubre cómo nuestra plataforma puede ayudarte en cada paso.</p>
+    <div class="features__list">
+      <div class="feature-item">
+        <div class="feature-icon"><img src="/images/icons/encontrar-icon.png" alt="Buscar propiedad" width="25" height="25"></div>
+        <h4>Busque una propiedad</h4>
+        <p>Encuentre lo que necesita en unos clicks.</p>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon"><img src="/images/icons/publicar-icon.png" alt="Publicar propiedad" width="25" height="25"></div>
+        <h4>Publique una propiedad</h4>
+        <p>Venda su propiedad rápidamente.</p>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon"><img src="/images/icons/encontrar-inmobiliaria-icon.png" alt="Encontrar inmobiliaria" width="25" height="25"></div>
+        <h4>Encuentre una inmobiliaria</h4>
+        <p>Venda 5 veces más rápido con profesionales.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="cta">
+  <div class="container cta__container">
+    <div class="cta__info">
+      <h1>La plataforma #1 en investigación sobre el mercado inmobiliario</h1>
+      <p>Todo de un vistazo: precio, ubicación, evolución del mercado. Compare y registre propiedades y tome decisiones con seguridad en el dinámico mercado inmobiliario: con la mayor base de datos inmobiliaria de Guatemala.</p>
+      <form class="newsletter-form" action="/subscribe" method="POST">
+        <input type="email" name="email" placeholder="Tu correo electrónico" required>
+        <button type="submit" class="btn">Suscribirme</button>
+      </form>
+    </div>
+    <div class="cta__image">
+      <img src="/images/landscape-antigua2.JPG" alt="Imagen CTA">
+    </div>
+  </div>
+</section>
+
+<script>
+  function scrollCarousel(direction) {
+    const container = document.getElementById('carouselContainer');
+    const scrollAmount = 300;
+    container.scrollBy({
+      left: scrollAmount * direction,
+      behavior: 'smooth'
+    });
+  }
+</script>
+
+<%- include('partials/footer') %>
