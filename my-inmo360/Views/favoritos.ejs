@@ -17,13 +17,21 @@
 
     <% propiedades.forEach(prop => { 
          const imagen = prop.imagenes_urls?.[0] || 
-           (typeof prop.imagenes_urls === 'string' ? JSON.parse(prop.imagenes_urls)[0] : '/images/default.jpg');
-         const ubicacion = [prop.zona, prop.municipio, prop.departamento].filter(Boolean).join(', ');
+           (typeof prop.imagenes_urls === 'string'
+             ? JSON.parse(prop.imagenes_urls)[0]
+             : '/images/default.jpg');
+         const ubicacion = [prop.zona, prop.municipio, prop.departamento]
+           .filter(Boolean).join(', ');
     %>
-      <div class="property-card favorite-card" onclick="window.location.href='/properties/<%= prop.id %>'">
+      <div 
+        class="property-card favorite-card" 
+        onclick="window.location.href='/properties/<%= prop.id %>'"
+        id="fav-<%= prop.id %>"
+      >
         <div class="image-wrapper">
           <span class="tag-operacion">
-            <%= prop.operacion && ['venta', 'compra'].includes(prop.operacion.toLowerCase()) ? 'Venta' : 'Renta' %>
+            <%= ['venta','compra'].includes((prop.operacion||'').toLowerCase())
+                ? 'Venta' : 'Renta' %>
           </span>
           <img src="<%= imagen %>" alt="Imagen propiedad" class="property-img">
           <div class="overlay">
@@ -32,9 +40,14 @@
               <p class="location"><%= ubicacion %></p>
               <p class="price">Q<%= Number(prop.precio).toLocaleString('es-GT') %></p>
             </div>
-            <form method="POST" action="/favoritos/<%= prop.id %>?_method=DELETE" onsubmit="event.stopPropagation()">
-              <button type="submit" class="remove-fav" onclick="event.stopPropagation()">Eliminar de favoritos</button>
-            </form>
+            <!-- Botón que dispara el DELETE vía fetch -->
+            <button 
+              class="remove-fav" 
+              data-id="<%= prop.id %>" 
+              onclick="event.stopPropagation();"
+            >
+              Eliminar de favoritos
+            </button>
           </div>
         </div>
       </div>
@@ -43,3 +56,42 @@
 </div>
 
 <%- include('partials/footer') %>
+
+<script>
+  document.querySelectorAll('.remove-fav').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const propiedadId = btn.dataset.id;
+      try {
+        const res = await fetch(`/favoritos/${propiedadId}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        if (res.status === 401) {
+          return window.location.href = '/login';
+        }
+        const data = await res.json();
+        if (data.success) {
+          // quitar la tarjeta del DOM
+          const card = document.getElementById(`fav-${propiedadId}`);
+          if (card) card.remove();
+
+          // opcional: si ya no quedan favoritos, mostrar mensaje
+          if (document.querySelectorAll('.favorite-card').length === 0) {
+            document.querySelector('.favorites-container').innerHTML = `
+              <div class="empty-favorites">
+                <p>No has marcado ninguna propiedad como favorita aún.</p>
+                <a href="/" class="explore-button">Explorar propiedades</a>
+              </div>`;
+          }
+        } else {
+          console.error('No se pudo eliminar de favoritos:', data.error);
+        }
+      } catch (err) {
+        console.error('Error al eliminar favorito:', err);
+      }
+    });
+  });
+</script>

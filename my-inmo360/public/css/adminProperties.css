@@ -1,0 +1,241 @@
+/* adminProperties.css */
+/* Reset */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: Arial, sans-serif;
+  }
+/* Panel general */
+.admin-panel {
+    padding: 2rem;
+    background-color: #f5f7fa;
+  }
+  .admin-panel h2 {
+    text-align: center;
+    margin-bottom: 1.5rem;
+    font-size: 1.8rem;
+    color: #333;
+  }
+  
+  /* Contenedor de tarjetas */
+/* Contenedor de tarjetas: máximo 3 por fila */
+.cards-container {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+  }
+  
+  /* Tarjeta de propiedad */
+  .property-card {
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .property-card.luxury {
+    border: 2px solid #d4af37; /* borde dorado */
+  }
+  
+  /* Cabecera de tarjeta */
+  .card-header {
+    padding: 1rem;
+    border-bottom: 1px solid #e0e0e0;
+  }
+  .card-header h3 {
+    margin-bottom: 0.25rem;
+    font-size: 1.4rem;
+    color: #222;
+  }
+  .card-header .location,
+  .card-header .date {
+    font-size: 0.85rem;
+    color: #777;
+    margin-right: 0.5rem;
+  }
+  
+  /* Carrusel de imágenes */
+  .media-carousel {
+    display: flex;
+    overflow-x: auto;
+    padding: 0.5rem;
+    gap: 0.5rem;
+  }
+  .media-carousel img {
+    flex: 0 0 auto;
+    width: 100px;
+    height: 75px;
+    object-fit: cover;
+    border-radius: 6px;
+  }
+  
+  /* Contenido principal y lateral */
+  .card-main {
+    display: flex;
+    padding: 1rem;
+    gap: 1rem;
+  }
+  .card-body {
+    flex: 3;
+  }
+  
+  /* Snippet de descripción */
+  .snippet {
+    font-size: 0.95rem;
+    color: #555;
+    margin-bottom: 0.75rem;
+  }
+  
+  /* Lista de detalles específicos */
+  .details {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 1rem;
+  }
+  .details li {
+    font-size: 0.9rem;
+    color: #444;
+    padding: 0.3rem 0;
+    border-bottom: 1px solid #eee;
+  }
+  
+  /* Lista de características */
+  .features {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    padding: 0;
+  }
+  .features li {
+    background: #eef2f5;
+    padding: 0.4rem 0.8rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    color: #333;
+  }
+  .features li.badge {
+    background: #d4af37;
+    color: #fff;
+    font-weight: bold;
+  }
+  .features li.luxury-feature {
+    background: #f9e7b9;
+    color: #8a6d3b;
+  }
+  
+  /* Botones media */
+  .actions {
+    margin-bottom: 1rem;
+  }
+  .actions .btn.media-btn {
+    display: inline-block;
+    margin-right: 0.5rem;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+    background: #75FBD3;
+    color: #000;
+    border-radius: 4px;
+    text-decoration: none;
+  }
+  .actions .btn.media-btn:hover {
+    background: #4ed7ae;
+  }
+  
+  /* Información del anunciante */
+  .advertiser-info {
+    flex: 1;
+    background: #fafafa;
+    padding: 0.75rem;
+    border-left: 1px solid #e0e0e0;
+    text-align: center;
+    border-radius: 6px;
+  }
+  .advertiser-info h4 {
+    margin-bottom: 0.5rem;
+    font-size: 1rem;
+    color: #333;
+  }
+  .advertiser-info img {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: 50%;
+    margin-bottom: 0.5rem;
+  }
+  .advertiser-info p {
+    font-size: 0.85rem;
+    color: #555;
+    margin: 0.25rem 0;
+  }
+  .advertiser-info .agency {
+    font-style: italic;
+  }
+  
+  /* Acciones admin */
+  .admin-actions {
+    padding: 1rem;
+    border-top: 1px solid #e0e0e0;
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+  }
+  .admin-actions .btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  .admin-actions .approve-btn {
+    background: #4caf50;
+    color: #fff;
+  }
+  .admin-actions .approve-btn:hover {
+    background: #43a047;
+  }
+  .admin-actions .reject-btn {
+    background: #e53935;
+    color: #fff;
+  }
+  .admin-actions .reject-btn:hover {
+    background: #d32f2f;
+  }
+  .admin-actions .input-motivo {
+    flex: 1;
+    padding: 0.4rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    margin-right: 0.5rem;
+    font-size: 0.85rem;
+  }
+  
+  /* Responsive */
+  @media (max-width: 768px) {
+    .card-main {
+      flex-direction: column;
+    }
+    .advertiser-info {
+      margin-top: 1rem;
+      border-left: none;
+      border-top: 1px solid #e0e0e0;
+    }
+  }
+
+/* Responsivo: 2 por fila en tablets */
+@media (max-width: 1300px) {
+    .cards-container {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  
+  /* Responsivo: 1 por fila en móviles */
+  @media (max-width: 900px) {
+    .cards-container {
+      grid-template-columns: 1fr;
+    }
+  }
+  

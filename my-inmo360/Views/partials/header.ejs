@@ -15,7 +15,6 @@
         <ul>
           <li><a href="/owners">Propietarios</a></li>
           <li><a href="/agencies">Inmobiliarias</a></li>
-          <li><a href="/acerca-de">Acerca de</a></li>
           <% if (session.user) { %>
             <li><a href="/properties">Propiedades</a></li>
             <li><a href="/favoritos">Favoritos</a></li>
@@ -30,7 +29,7 @@
           <!-- Botón de notificaciones -->
           <div id="notif-container" class="notif-container">
             <button id="notif-button" class="notif-button" aria-label="Notificaciones">
-              🔔
+              <img src="/images/icons/bell-icon.png" alt="Notificaciones" class="bell-icon">
               <span id="notif-badge" class="notif-badge hidden">0</span>
             </button>
             <ul id="notif-dropdown" class="notif-dropdown hidden"></ul>
@@ -68,7 +67,7 @@
           <!-- Notificaciones en mobile -->
           <div id="notif-container-mobile" class="notif-container">
             <button id="notif-button-mobile" class="notif-button" aria-label="Notificaciones">
-              🔔
+              <img src="/images/icons/bell-icon.png" alt="Notificaciones" class="bell-icon">
               <span id="notif-badge-mobile" class="notif-badge hidden">0</span>
             </button>
             <ul id="notif-dropdown-mobile" class="notif-dropdown hidden"></ul>
@@ -85,7 +84,6 @@
     <ul>
       <li><a href="/propietarios">Propietarios</a></li>
       <li><a href="/inmobiliarias">Inmobiliarias</a></li>
-      <li><a href="/acerca-de">Acerca de</a></li>
       <% if (session.user) { %>
         <li><a href="/properties">Propiedades</a></li>
         <li><a href="/favoritos">Favoritos</a></li>

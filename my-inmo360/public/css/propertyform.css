@@ -298,3 +298,109 @@ body::before {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Contenedor de previews */
+.preview-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+/* Cada slot */
+.preview-item {
+  position: relative;
+  width: 150px;            /* Aumentado de 120px */
+  padding: 0.75rem;        /* Aumentado de 0.5rem */
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background: #fafafa;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Número fijo */
+.order-label {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: #75FBD3;
+  color: black;
+  font-size: 0.8rem;
+  font-weight: bold;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* Contenedor de flechas */
+.arrow-controls {
+  display: flex;
+  gap: 0.25rem;           /* Espacio entre flechas */
+  margin: 0.5rem 0;       /* Separación vertical */
+}
+
+/* Ajuste de tamaño de los botones de flechas */
+.arrow-controls button {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  font-size: 1.1rem;
+}
+
+/* Botones de flecha individuales */
+.move-up,
+.move-down {
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, border-color 0.2s;
+}
+.move-up:hover,
+.move-down:hover {
+  background: #f0f0f0;
+  border-color: #999;
+}
+.move-up:disabled,
+.move-down:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Botón de eliminar */
+.remove-preview {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  font-size: 0.9rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+.remove-preview:hover {
+  background: #c82333;
+}
+
+/* Miniatura */
+.preview-img {
+  max-width: 100%;
+  max-height: 120px;       /* Aumentado de 80px */
+  object-fit: cover;
+  border-radius: 4px;
+  margin-top: 0.75rem;     /* Aumentado de 0.5rem */
+}

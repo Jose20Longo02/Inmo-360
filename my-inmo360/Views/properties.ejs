@@ -29,9 +29,15 @@
               let imageSrc = images.length > 0 ? images[0] : (property.imagen_url || '/images/placeholder.jpg');
             %>
             <img src="<%= imageSrc %>" alt="<%= property.titulo %>">
+
+            <!-- Badges -->
             <div class="property-badge">
               <%= property.operacion === 'renta' ? 'Renta' : 'Venta' %>
             </div>
+            <% if (property.estado === 'pendiente') { %>
+              <div class="status-badge review">En revisión</div>
+            <% } %>
+
             <div class="property-overlay">
               <h2 class="property-title"><%= property.titulo %></h2>
               <p class="property-location"><%= property.zona %>, <%= property.municipio %>, <%= property.departamento %></p>
@@ -64,9 +70,25 @@
                 </div>
               </div>
               <div class="property-actions">
-                <a href="/properties/edit/<%= property.id %>" class="btn edit-btn">Editar</a>
-                <form action="/properties/delete/<%= property.id %>" method="POST" onsubmit="return confirm('¿Estás seguro de eliminar esta propiedad?');">
-                  <button type="submit" class="btn delete-btn">Eliminar</button>
+                <a 
+                  href="/properties/edit/<%= property.id %>" 
+                  class="btn edit-btn"
+                  onclick="event.stopPropagation()"
+                >Editar</a>
+            
+                <form 
+                  action="/properties/delete/<%= property.id %>" 
+                  method="POST" 
+                  onclick="event.stopPropagation()" 
+                  onsubmit="return confirm('¿Estás seguro de eliminar esta propiedad?');"
+                >
+                  <button 
+                    type="submit" 
+                    class="btn delete-btn"
+                    onclick="event.stopPropagation()"
+                  >
+                    Eliminar
+                  </button>
                 </form>
               </div>
             </div>
@@ -99,15 +121,38 @@
       <a href="?page=<%= page + 1 %>&limit=<%= limit %>" class="page-link">»</a>
     <% } %>
   </div>
+</div>
 
-<script>
-  document.addEventListener('DOMContentLoaded', function () {
-    document.querySelectorAll('.delete-btn').forEach(btn => {
-      btn.addEventListener('click', function (e) {
-        e.stopPropagation(); // ✋ evita que el contenedor padre reciba el clic
+<% if (submitted) { %>
+  <!-- Modal de revisión pendiente -->
+  <div id="submission-modal" class="modal">
+    <div class="modal-content">
+      <span class="modal-close">&times;</span>
+      <h2>Propiedad en revisión</h2>
+      <p>Tu propiedad está bajo revisión y serás notificado cuando sea aprobada o rechazada.</p>
+      <button id="modal-ok" class="btn">OK</button>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const modal = document.getElementById('submission-modal');
+      // Mostrar el modal
+      modal.style.display = 'flex';
+
+      // Función de cierre
+      const closeModal = () => modal.style.display = 'none';
+
+      // Cerrar al hacer clic en la X o en OK
+      modal.querySelector('.modal-close').addEventListener('click', closeModal);
+      document.getElementById('modal-ok').addEventListener('click', closeModal);
+
+      // Cerrar si clic fuera del contenido
+      window.addEventListener('click', e => {
+        if (e.target === modal) closeModal();
       });
     });
-  });
-</script>
+  </script>
+<% } %>
 
 <%- include('partials/footer') %>

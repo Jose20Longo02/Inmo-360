@@ -1,0 +1,153 @@
+<%- include('partials/header') %>
+
+<head>
+    <link rel="stylesheet" href="/css/adminProperties.css">
+    <link rel="stylesheet" href="/css/header.css" />
+  </head>
+
+<section class="admin-panel">
+  <h2>Propiedades pendientes de aprobación</h2>
+
+  <% if (pendientes.length > 0) { %>
+    <div class="cards-container">
+      <% pendientes.forEach(p => { %>
+        <div class="property-card <%= p.luxo ? 'luxury' : '' %>">
+          
+          <!-- Cabecera -->
+          <div class="card-header">
+            <h3><%= p.titulo %></h3>
+            <span class="location"><%= p.departamento %>, <%= p.municipio %></span>
+            <span class="date"><%= p.created_at.toLocaleDateString() %></span>
+          </div>
+
+          <!-- Carousel de imágenes -->
+          <div class="media-carousel">
+            <% 
+              let imgs = [];
+              try { imgs = Array.isArray(p.imagenes_urls) ? p.imagenes_urls : JSON.parse(p.imagenes_urls); }
+              catch { imgs = []; }
+            %>
+            <% if (imgs.length) { %>
+              <% imgs.forEach(url => { %>
+                <img src="<%= url %>" alt="Imagen propiedad">
+              <% }) %>
+            <% } else { %>
+              <img src="/images/placeholder.jpg" alt="Sin imágenes">
+            <% } %>
+          </div>
+
+          <!-- Contenido y barra lateral -->
+          <div class="card-main">
+            <!-- Detalles principales -->
+            <div class="card-body">
+              <!-- Snippet de descripción -->
+              <p class="snippet">
+                <%= p.descripcion
+                      ? (p.descripcion.substring(0, 50) + '...')
+                      : '' %>
+              </p>
+
+              <!-- Detalles según tipo de propiedad -->
+              <ul class="details">
+                <% if (p.tipo_propiedad === 'casa' || p.tipo_propiedad === 'apartamento') { %>
+                  <li>Habitaciones: <%= p.habitaciones || '—' %></li>
+                  <li>Baños: <%= p.banos || '—' %></li>
+                  <li>m² Construcción: <%= p.m2_construccion || '—' %></li>
+                  <li>m² Terreno: <%= p.m2_terreno || '—' %></li>
+                <% } else if (p.tipo_propiedad === 'terreno') { %>
+                  <li>m² Terreno: <%= p.tamano_terreno || '—' %></li>
+                  <li>Metros de frente: <%= p.metros_frente || '—' %></li>
+                  <% 
+                    let carTer = [];
+                    try { carTer = JSON.parse(p.caracteristicas_terreno); } catch {}
+                  %>
+                  <% if (carTer.includes('orilla_calle')) { %><li>Orilla Calle</li><% } %>
+                  <% if (carTer.includes('orilla_carretera')) { %><li>Orilla Carretera</li><% } %>
+                <% } else if (p.tipo_propiedad === 'bodega') { %>
+                  <li>Tamaño bodega: <%= p.bodega_tamano || '—' %> m²</li>
+                  <li>Altura bodega: <%= p.bodega_altura || '—' %> m</li>
+                  <li>Oficinas: <%= p.cantidad_oficinas || '—' %></li>
+                  <li>Baños bodega: <%= p.cantidad_banos || '—' %></li>
+                <% } else if (p.tipo_propiedad === 'local comercial') { %>
+                  <li>Tamaño local: <%= p.local_tamano || '—' %> m²</li>
+                  <li>Baños: <%= p.cantidad_banos || '—' %></li>
+                <% } %>
+              </ul>
+
+              <!-- Lista de características personalizadas -->
+              <% 
+                let feats = [];
+                if (Array.isArray(p.caracteristicas)) {
+                  feats = p.caracteristicas;
+                } else if (typeof p.caracteristicas === 'string') {
+                  try { feats = JSON.parse(p.caracteristicas); }
+                  catch { feats = [p.caracteristicas]; }
+                }
+                let luxFeats = [];
+                if (Array.isArray(p.luxury_features)) {
+                  luxFeats = p.luxury_features;
+                } else if (typeof p.luxury_features === 'string') {
+                  try { luxFeats = JSON.parse(p.luxury_features); }
+                  catch { luxFeats = [p.luxury_features]; }
+                }
+              %>
+              <ul class="features">
+                <% if (p.luxo) { %>
+                  <li class="badge">LUJO</li>
+                <% } %>
+                <% feats.forEach(f => { %>
+                  <li><%= f.replace(/_/g,' ') %></li>
+                <% }) %>
+                <% luxFeats.forEach(f => { %>
+                  <li class="luxury-feature"><%= f.replace(/_/g,' ') %></li>
+                <% }) %>
+              </ul>
+
+              <!-- Botones de media -->
+              <div class="actions">
+                <% if (p.video_url) { %>
+                  <a href="<%= p.video_url %>" target="_blank" class="btn media-btn">Ver video</a>
+                <% } %>
+                <% if (p.plano_url) { %>
+                  <a href="<%= p.plano_url %>" target="_blank" class="btn media-btn">Ver plano</a>
+                <% } %>
+              </div>
+            </div>
+
+            <!-- Información del anunciante -->
+            <aside class="advertiser-info">
+              <h4>Anunciante</h4>
+              <img src="<%= p.user_profile_pic || '/images/user-default.png' %>" alt="Foto anunciante">
+              <p class="name"><strong><%= p.user_name || '—' %></strong></p>
+              <p class="email"><%= p.user_email || '—' %></p>
+              <p class="phone"><%= p.user_phone || '—' %></p>
+              <p class="agency">
+                Inmobiliaria: 
+                <% if (p.belongs_to_agency) { %>
+                  <%= p.agency_name %>
+                <% } else { %>
+                  —  
+                <% } %>
+              </p>
+            </aside>
+          </div>
+
+          <!-- Acciones de aprobación/rechazo -->
+          <div class="admin-actions">
+            <form action="/admin/properties/<%= p.id %>/aprobar" method="POST">
+              <button class="btn approve-btn">Aprobar</button>
+            </form>
+            <form action="/admin/properties/<%= p.id %>/rechazar" method="POST">
+              <input name="motivo" placeholder="Motivo de rechazo" required class="input-motivo">
+              <button class="btn reject-btn">Rechazar</button>
+            </form>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+  <% } else { %>
+    <p>No hay propiedades pendientes.</p>
+  <% } %>
+</section>
+
+<%- include('partials/footer') %>

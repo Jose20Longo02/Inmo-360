@@ -1,40 +1,81 @@
 <%- include('partials/header') %>
 <head>
   <link rel="stylesheet" href="/css/agencyDetail.css">
-  <link rel="stylesheet" href="/css/header.css">
 </head>
 
 <div class="agency-detail-container">
-  <h2>Mi Inmobiliaria: <%= agency.name %></h2>
-  <div class="agency-info">
+  <header class="agency-header">
     <% if (agency.logo_url) { %>
       <img src="<%= agency.logo_url %>" alt="Logo de <%= agency.name %>" class="agency-logo">
-    <% } %>
-    <p><strong>Estado:</strong> <%= agency.estado %></p>
-    <p><strong>Agentes:</strong> <%= agentsCount %></p>
-  </div>
-
-  <hr />
-
-  <section class="properties-section">
-    <h3>Propiedades de la inmobiliaria</h3>
-    <% if (properties.length) { %>
-      <ul class="properties-list">
-        <% properties.forEach(function(prop) { %>
-          <li>
-            <a href="/properties/<%= prop.id %>"><%= prop.titulo %></a>
-          </li>
-        <% }); %>
-      </ul>
-      <div class="pagination">
-        <% for (let i = 1; i <= Math.ceil(totalProps / limit); i++) { %>
-          <a href="/inmobiliaria/<%= agency.id %>?page=<%= i %>" class="page-link <%= page === i ? 'active' : '' %>"><%= i %></a>
-        <% } %>
-      </div>
     <% } else { %>
-      <p>No hay propiedades registradas.</p>
+      <div class="agency-placeholder-logo">No Logo</div>
     <% } %>
-  </section>
+    <div class="agency-meta">
+      <h1><%= agency.name %></h1>
+      <p class="agency-status">Estado: <span><%= agency.estado %></span></p>
+      <p class="agency-count">Agentes: <span><%= agentsCount %></span></p>
+    </div>
+  </header>
+
+  <div class="agency-content">
+    <!-- Propiedades -->
+    <section class="properties-section">
+      <h2>Propiedades Publicadas</h2>
+      <% if (properties.length) { %>
+        <div class="properties-grid">
+          <% properties.forEach(prop => {
+               // parse imagenes_urls
+               let imgs = Array.isArray(prop.imagenes_urls) ? prop.imagenes_urls : JSON.parse(prop.imagenes_urls||'[]');
+               let thumb = imgs.length ? imgs[0] : '/images/placeholder.jpg';
+          %>
+            <div class="property-card">
+              <a href="/properties/<%= prop.id %>">
+                <div class="card-image">
+                  <img src="<%= thumb %>" alt="<%= prop.titulo %>">
+                </div>
+                <div class="card-body">
+                  <h3><%= prop.titulo %></h3>
+                  <p class="card-location"><%= prop.zona %>, <%= prop.municipio %></p>
+                  <p class="card-price">
+                    Q<%= parseFloat(prop.precio).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}) %>
+                    <% if (prop.operacion==='renta') { %> / mes <% } %>
+                  </p>
+                  <p class="card-agent">Publicado por: <strong><%= prop.user_name %></strong></p>
+                </div>
+              </a>
+            </div>
+          <% }) %>
+        </div>
+
+        <!-- Paginación -->
+        <div class="pagination">
+          <% const totalPages = Math.ceil(totalProps / limit); %>
+          <% for (let i = 1; i <= totalPages; i++) { %>
+            <a href="/inmobiliaria/<%= agency.id %>?page=<%= i %>" class="page-link <%= i===page?'active':''%>"><%= i %></a>
+          <% } %>
+        </div>
+      <% } else { %>
+        <p class="no-properties">No hay propiedades registradas.</p>
+      <% } %>
+    </section>
+
+    <!-- Sidebar de Agentes -->
+    <aside class="agents-sidebar">
+      <h2>Agentes de <%= agency.name %></h2>
+      <% if (agents.length) { %>
+        <ul class="agents-list">
+          <% agents.forEach(agent => { %>
+            <li class="agent-card">
+              <img src="<%= agent.profile_pic||'/images/icons/user-default.png' %>" alt="<%= agent.name %>">
+              <p><%= agent.name %></p>
+            </li>
+          <% }) %>
+        </ul>
+      <% } else { %>
+        <p class="no-agents">No hay agentes asignados.</p>
+      <% } %>
+    </aside>
+  </div>
 </div>
 
 <%- include('partials/footer') %>

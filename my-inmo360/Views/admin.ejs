@@ -7,8 +7,22 @@
 <div class="admin-container">
   <h1>Panel de Administración</h1>
   <ul>
-    <li><a href="/admin/agencies">Inmobiliarias pendientes</a></li>
-    <li><a href="/admin/properties">Propiedades pendientes</a></li>
+    <li>
+      <a href="/admin/agencies" class="admin-link">
+        Inmobiliarias pendientes
+        <% if (pendingAgencies > 0) { %>
+          <span class="badge"><%= pendingAgencies %></span>
+        <% } %>
+      </a>
+    </li>
+    <li>
+      <a href="/admin/properties" class="admin-link">
+        Propiedades pendientes
+        <% if (pendingProperties > 0) { %>
+          <span class="badge"><%= pendingProperties %></span>
+        <% } %>
+      </a>
+    </li>
     <li><a href="/admin/notifications">Historial de notificaciones</a></li>
     <li><a href="/admin/stats/users">Estadísticas de usuarios</a></li>
     <li><a href="/admin/stats/properties">Estadísticas de propiedades</a></li>

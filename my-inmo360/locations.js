@@ -146,7 +146,7 @@ module.exports = {
         },
         {
           nombre: 'La Esperanza',
-          zonas: ['Zona 1']
+          zonas: ['Zona 1', 'Zona 2', 'Zona 3', 'Zona 4', 'Zona 5']
         },
         {
           nombre: 'Olintepeque',
@@ -158,7 +158,7 @@ module.exports = {
         },
         {
           nombre: 'Salcajá',
-          zonas: ['Zona 1']
+          zonas: ['Zona 1', 'Zona 2', 'Zona 3', 'Zona 4', 'Zona 5']
         },
         {
           nombre: 'San Carlos Sija',
@@ -358,7 +358,7 @@ module.exports = {
         },
         {
           nombre: 'San Felipe',
-          zonas: ['Zona 1']
+          zonas: ['Zona 1', 'Zona 2', 'Zona 3', 'Zona 4', 'Zona 5']
         },
         {
           nombre: 'San Andrés Villa Seca',

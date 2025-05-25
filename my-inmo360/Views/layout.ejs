@@ -4,20 +4,24 @@
   <meta charset="UTF-8" />
   <title>Inmo 360 - Plataforma Inmobiliaria</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- Estilos globales y layout/footer específicos -->
   <link rel="stylesheet" href="/css/styles.css" />
+  <link rel="stylesheet" href="/css/layout.css" />
+  <link rel="stylesheet" href="/css/footer.css" />
 </head>
 <body>
-  <header>
-    <% include partials/header %>
-  </header>
+  <div class="inmo360-layout">
+    <header class="inmo360-header">
+      <% include partials/header %>
+    </header>
 
-  <main>
-    <%- body %>
-  </main>
+    <main class="inmo360-main">
+      <%- body %>
+    </main>
 
-  <footer>
     <% include partials/footer %>
-  </footer>
+  </div>
+
   <script src="/js/main.js"></script>
 </body>
 </html>

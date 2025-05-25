@@ -253,9 +253,9 @@
           <input type="file" name="imagenes" id="imagenes" accept="image/*" multiple hidden>
         </div>
         <div id="preview-imagenes" class="preview-container"></div>
-      </div>
-    
-      <!-- Subir Video -->
+        </div>
+
+              <!-- Subir Video -->
       <div class="multimedia-subblock">
         <div class="multimedia-subtitle">Video (opcional, máx. 100MB)</div>
         <div class="upload-area">
@@ -276,12 +276,17 @@
         </div>
         <div id="preview-plano" class="preview-container"></div>
       </div>
+    </div>
+    
+
     
     <!-- CAMPO DE DESCRIPCIÓN (Obligatorio, máx 800 caracteres) -->
     <div class="input-group">
       <label for="descripcion">Descripción</label>
       <textarea name="descripcion" id="descripcion" required rows="6"><%= property ? property.descripcion : '' %></textarea>
     </div>
+
+  
     
     <button type="submit" class="btn"><%= property ? 'Actualizar' : 'Crear' %></button>
   </form>
@@ -329,26 +334,27 @@
   });
 </script>
 
-<!-- SCRIPT: Secciones condicionales y vistas previas -->
+<!-- SCRIPT: Secciones condicionales, vistas previas y drag & drop de imágenes -->
 <script>
   document.addEventListener('DOMContentLoaded', function () {
+    // --- Secciones condicionales ---
     const tipoPropiedadSelect = document.getElementById('tipo_propiedad');
-    const sectionResidencial = document.getElementById('section-residencial');
-    const sectionTerreno = document.getElementById('section-terreno');
-    const sectionBodega = document.getElementById('section-bodega');
-    const sectionLocal = document.getElementById('section-local');
+    const sectionResidencial   = document.getElementById('section-residencial');
+    const sectionTerreno       = document.getElementById('section-terreno');
+    const sectionBodega        = document.getElementById('section-bodega');
+    const sectionLocal         = document.getElementById('section-local');
 
     const checkOficina = document.getElementById('check-oficina');
-    const oficinasNum = document.getElementById('oficinas-num');
-    const checkBano = document.getElementById('check-bano');
-    const banosNum = document.getElementById('banos-num');
+    const oficinasNum  = document.getElementById('oficinas-num');
+    const checkBano    = document.getElementById('check-bano');
+    const banosNum     = document.getElementById('banos-num');
 
-    const luxoCheckbox = document.getElementById('luxo');
+    const luxoCheckbox  = document.getElementById('luxo');
     const luxuryOptions = document.getElementById('luxury-options');
 
     const terrenoCheckboxes = document.querySelectorAll('input[name="caracteristicas_terreno[]"]');
-    const frenteCalleDiv = document.getElementById('frente-calle');
-    const metrosInput = document.getElementById('metros_frente');
+    const frenteCalleDiv    = document.getElementById('frente-calle');
+    const metrosInput       = document.getElementById('metros_frente');
 
     const planoInput = document.getElementById('plano');
     const planoBlock = document.querySelector('.plano-block');
@@ -363,14 +369,13 @@
 
     function toggleSections() {
       const tipo = tipoPropiedadSelect.value;
-      sectionResidencial.style.display = tipo === 'casa' || tipo === 'apartamento' ? 'block' : 'none';
-      sectionTerreno.style.display = tipo === 'terreno' ? 'block' : 'none';
-      sectionBodega.style.display = tipo === 'bodega' ? 'block' : 'none';
-      sectionLocal.style.display = tipo === 'local comercial' ? 'block' : 'none';
+      sectionResidencial.style.display = (tipo === 'casa' || tipo === 'apartamento') ? 'block' : 'none';
+      sectionTerreno.style.display     = (tipo === 'terreno')  ? 'block' : 'none';
+      sectionBodega.style.display      = (tipo === 'bodega')   ? 'block' : 'none';
+      sectionLocal.style.display       = (tipo === 'local comercial') ? 'block' : 'none';
       setRequiredAttributes(sectionResidencial, tipo === 'casa' || tipo === 'apartamento');
-      setRequiredAttributes(sectionTerreno, tipo === 'terreno');
+      setRequiredAttributes(sectionTerreno,     tipo === 'terreno');
 
-      // Mostrar plano solo para terreno
       if (tipo === 'terreno') {
         planoBlock.style.display = 'block';
         planoInput.setAttribute('required', 'required');
@@ -413,107 +418,217 @@
       });
     }
 
-    function previewFiles(input, previewContainerId, type = 'image') {
-      const previewContainer = document.getElementById(previewContainerId);
-      previewContainer.innerHTML = '';
-      const originalFiles = Array.from(input.files);
-      const validFiles = [];
-
-      const sizeLimit = type === 'image' ? 8 * 1024 * 1024 : 100 * 1024 * 1024;
-
-      originalFiles.forEach(file => {
-        if (!file.type.startsWith(type + '/')) return;
-
-        if (file.size > sizeLimit) {
-          alert(`El archivo "${file.name}" excede el límite de tamaño permitido (${type === 'image' ? '5MB' : '50MB'}).`);
-          return;
-        }
-
-        validFiles.push(file);
-      });
-
-      const dataTransfer = new DataTransfer();
-
-      validFiles.forEach((file, i) => {
-        const reader = new FileReader();
-        reader.onload = function (e) {
-          const previewItem = document.createElement('div');
-          previewItem.className = 'preview-item';
-
-          const removeBtn = document.createElement('button');
-          removeBtn.className = 'remove-preview';
-          removeBtn.innerText = '×';
-          removeBtn.addEventListener('click', (ev) => {
-            ev.preventDefault();
-            ev.stopPropagation();
-            validFiles.splice(i, 1);
-            previewFilesFromArray(input, previewContainerId, validFiles, type);
-          });
-
-          const media = document.createElement(type === 'image' ? 'img' : 'video');
-          media.src = e.target.result;
-          media.className = type === 'image' ? 'preview-img' : 'preview-video';
-          if (type === 'video') media.controls = true;
-
-          previewItem.appendChild(removeBtn);
-          previewItem.appendChild(media);
-          previewContainer.appendChild(previewItem);
-        };
-        reader.readAsDataURL(file);
-        dataTransfer.items.add(file);
-      });
-
-      input.files = dataTransfer.files;
-
-      const infoSpan = document.getElementById(`${input.id}-info`);
-      if (infoSpan) {
-        infoSpan.textContent = input.files.length > 0
-          ? `${input.files.length} archivo(s) seleccionado(s)`
-          : 'Sin archivos seleccionados';
-      }
-    }
-
-    function previewFilesFromArray(input, previewContainerId, filesArray, type) {
-      const dataTransfer = new DataTransfer();
-      filesArray.forEach(file => dataTransfer.items.add(file));
-      input.files = dataTransfer.files;
-      previewFiles(input, previewContainerId, type);
-    }
-
+    // Enlaces de cambio para imágenes, video y plano
     document.getElementById('imagenes').addEventListener('change', function () {
       previewFiles(this, 'preview-imagenes', 'image');
     });
-
     document.getElementById('video').addEventListener('change', function () {
       previewFiles(this, 'preview-video', 'video');
     });
-
     document.getElementById('plano').addEventListener('change', function () {
       previewFiles(this, 'preview-plano', 'image');
     });
 
+    // Formato de precio
     const precioInput = document.getElementById('precio');
     if (precioInput) {
       precioInput.addEventListener('focus', function () {
-        let raw = precioInput.value.replace(/^Q\s*/, '').replace(/,/g, '');
-        precioInput.value = raw;
+        precioInput.value = precioInput.value.replace(/^Q\s*/, '').replace(/,/g, '');
       });
       precioInput.addEventListener('blur', function () {
-        let raw = precioInput.value.replace(/^Q\s*/, '').replace(/,/g, '');
-        if (!raw.trim()) return;
-        let num = parseFloat(raw);
-        if (isNaN(num)) {
-          precioInput.value = '';
-        } else {
-          let formatted = num.toLocaleString('en-US', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-          });
-          precioInput.value = 'Q' + formatted;
-        }
+        let raw = precioInput.value.replace(/^Q\s*/, '').replace(/,/g, '').trim();
+        if (!raw) return;
+        const num = parseFloat(raw);
+        precioInput.value = isNaN(num) ? '' : 'Q' + num.toLocaleString('en-US',{ minimumFractionDigits:2, maximumFractionDigits:2 });
       });
     }
   });
 </script>
 
-<%- include('partials/footer') %>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.13.0/Sortable.min.js"></script>
+
+<!-- SCRIPT: Ordenar imágenes con flechas ARRIBA/ABAJO y números fijos -->
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const imgInput = document.getElementById('imagenes');
+  const previewContainer = document.getElementById('preview-imagenes');
+  let currentFiles = [];
+
+  // Sincroniza imgInput.files con currentFiles[]
+  function updateInputFiles() {
+    const dt = new DataTransfer();
+    currentFiles.forEach(f => dt.items.add(f));
+    imgInput.files = dt.files;
+  }
+
+  // Dibuja N slots numerados (1…N) y coloca en cada uno su imagen
+  function renderSlots() {
+    previewContainer.innerHTML = '';
+    for (let slot = 0; slot < currentFiles.length; slot++) {
+      const file = currentFiles[slot];
+      const wrapper = document.createElement('div');
+      wrapper.className = 'preview-item';
+
+      // Nº de orden FIJO
+      const badge = document.createElement('span');
+      badge.className = 'order-label';
+      badge.innerText = slot + 1;
+      wrapper.appendChild(badge);
+
+      // Creamos el contenedor de flechas
+      const arrowCtr = document.createElement('div');
+      arrowCtr.className = 'arrow-controls';
+
+      // Flecha ARRIBA
+      const upBtn = document.createElement('button');
+      upBtn.className = 'move-up';
+      upBtn.innerText = '▲';
+      upBtn.disabled = slot === 0;
+      upBtn.addEventListener('click', ev => {
+        ev.stopPropagation();
+        [currentFiles[slot - 1], currentFiles[slot]] = [currentFiles[slot], currentFiles[slot - 1]];
+        updateInputFiles();
+        renderSlots();
+      });
+      arrowCtr.appendChild(upBtn);
+
+      // Flecha ABAJO
+      const downBtn = document.createElement('button');
+      downBtn.className = 'move-down';
+      downBtn.innerText = '▼';
+      downBtn.disabled = slot === currentFiles.length - 1;
+      downBtn.addEventListener('click', ev => {
+        ev.stopPropagation();
+        [currentFiles[slot], currentFiles[slot + 1]] = [currentFiles[slot + 1], currentFiles[slot]];
+        updateInputFiles();
+        renderSlots();
+      });
+      arrowCtr.appendChild(downBtn);
+
+      // Añadimos el contenedor al wrapper (en lugar de los dos append individuales)
+      wrapper.appendChild(arrowCtr);
+
+      // Eliminar este slot/imagen
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'remove-preview';
+      removeBtn.innerText = '×';
+      removeBtn.addEventListener('click', ev => {
+        ev.stopPropagation();
+        currentFiles.splice(slot, 1);
+        updateInputFiles();
+        renderSlots();
+      });
+      wrapper.appendChild(removeBtn);
+
+      // Miniatura de la imagen
+      const img = document.createElement('img');
+      img.className = 'preview-img';
+      const reader = new FileReader();
+      reader.onload = e => img.src = e.target.result;
+      reader.readAsDataURL(file);
+      wrapper.appendChild(img);
+
+      previewContainer.appendChild(wrapper);
+    }
+  }
+
+  // Cuando el usuario selecciona nuevas imágenes
+  imgInput.addEventListener('change', () => {
+    currentFiles = Array.from(imgInput.files);
+    updateInputFiles();
+    renderSlots();
+  });
+
+  // Si ya hay archivos (p.ej. en edición), los mostramos
+  if (imgInput.files.length) {
+    currentFiles = Array.from(imgInput.files);
+    renderSlots();
+  }
+});
+
+
+
+
+
+
+
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Obtén referencias a los inputs y contenedores
+    const videoInput = document.getElementById('video');
+    const planoInput = document.getElementById('plano');
+
+    // Manejador genérico de preview
+    function previewFiles(input, previewContainerId, type = 'image') {
+      const previewContainer = document.getElementById(previewContainerId);
+      // Limpiar todo antes de renderizar
+      previewContainer.innerHTML = '';
+
+      // Convertir FileList a array para poder modificarlo
+      const filesArr = Array.from(input.files);
+      const dt       = new DataTransfer();
+
+      filesArr.forEach((file, index) => {
+        if (!file.type.startsWith(type + '/')) return;
+
+        // Lo agregamos al DataTransfer para poder reconstruir input.files tras eliminar
+        dt.items.add(file);
+
+        const reader = new FileReader();
+        reader.onload = e => {
+          // Wrapper
+          const wrapper = document.createElement('div');
+          wrapper.className = 'preview-item';
+
+          // Botón “×” para eliminar
+          const removeBtn = document.createElement('button');
+          removeBtn.type = 'button';
+          removeBtn.className = 'remove-preview';
+          removeBtn.innerText = '×';
+          removeBtn.addEventListener('click', ev => {
+            ev.stopPropagation();
+            // Quitar este archivo del array y volver a renderizar
+            filesArr.splice(index, 1);
+            input.files = (() => {
+              const newDt = new DataTransfer();
+              filesArr.forEach(f => newDt.items.add(f));
+              return newDt.files;
+            })();
+            previewFiles(input, previewContainerId, type);
+          });
+          wrapper.appendChild(removeBtn);
+
+          // Número fijo (opcional, si quieres mostrarlo)
+          // const badge = document.createElement('span');
+          // badge.className = 'order-label';
+          // badge.innerText = index + 1;
+          // wrapper.appendChild(badge);
+
+          // Miniatura
+          if (type === 'video') {
+            const vid = document.createElement('video');
+            vid.src = e.target.result;
+            vid.controls = true;
+            vid.className = 'preview-video';
+            wrapper.appendChild(vid);
+          } else {
+            const img = document.createElement('img');
+            img.src = e.target.result;
+            img.className = 'preview-img';
+            wrapper.appendChild(img);
+          }
+
+          previewContainer.appendChild(wrapper);
+        };
+        reader.readAsDataURL(file);
+      });
+
+      // Reasignar los archivos al input
+      input.files = dt.files;
+    }
+
+    videoInput.addEventListener('change', () => previewFiles(videoInput, 'preview-video', 'video'));
+    planoInput.addEventListener('change', () => previewFiles(planoInput, 'preview-plano', 'image'));
+  });
+</script>
+

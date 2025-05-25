@@ -1,0 +1,87 @@
+<%- include('partials/header') %>
+<head>
+  <link rel="stylesheet" href="/css/admin.css">
+  <link rel="stylesheet" href="/css/statsUsers.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<div class="stats-banner">
+  Total de usuarios registrados:
+  <span class="stats-banner__number"><%= totalUsers %></span>
+</div>
+
+<div class="stats-cards">
+  <div class="card">
+    <h4>Reparto por Rol</h4>
+    <ul>
+      <% roles.forEach(r => { %>
+        <li><strong><%= r.rol %>:</strong> <%= r.cnt %></li>
+      <% }) %>
+    </ul>
+  </div>
+  <div class="card">
+    <h4>Con foto de perfil</h4>
+    <p><%= pctWithPic %>%</p>
+  </div>
+  <div class="card">
+    <h4>Con ≥1 propiedad</h4>
+    <p><%= pctWithProp %>%</p>
+  </div>
+</div>
+
+<div class="stats-charts">
+  <div class="chart-block">
+    <div class="chart-header">
+      <h4>Nuevos registros (últimos 30 d)</h4>
+      <span class="chart-total">Total: <%= signupsTotal %></span>
+    </div>
+    <canvas id="signupsChart"></canvas>
+  </div>
+
+  <div class="chart-block">
+    <div class="chart-header">
+      <h4>Usuarios activos diarios (últimos 30 d)</h4>
+      <span class="chart-total">Total: <%= activeTotal %></span>
+    </div>
+    <canvas id="activeChart"></canvas>
+  </div>
+
+  <div class="chart-block">
+    <h4>Top 10 Departamentos</h4>
+    <canvas id="geoChart"></canvas>
+  </div>
+</div>
+
+<script>
+  // Datos para Chart.js
+  const signupsLabels = <%- JSON.stringify(signups.map(r => r.day)) %>;
+  const signupsData   = <%- JSON.stringify(signups.map(r => r.cnt)) %>;
+
+  const activeLabels = <%- JSON.stringify(active.map(r => r.day)) %>;
+  const activeData   = <%- JSON.stringify(active.map(r => r.cnt)) %>;
+
+  const geoLabels = <%- JSON.stringify(geo.map(r => r.departamento)) %>;
+  const geoData   = <%- JSON.stringify(geo.map(r => r.cnt)) %>;
+
+  // Funciones helper
+  function makeLineChart(id, labels, data, label) {
+    new Chart(document.getElementById(id), {
+      type: 'line',
+      data: { labels, datasets: [{ label, data, fill:false, tension:0.3 }] },
+      options: { responsive:true, scales:{ x:{ grid:{display:false} } } }
+    });
+  }
+  function makeBarChart(id, labels, data, label) {
+    new Chart(document.getElementById(id), {
+      type: 'bar',
+      data: { labels, datasets: [{ label, data }] },
+      options: { responsive:true }
+    });
+  }
+
+  makeLineChart('signupsChart', signupsLabels, signupsData, 'Registros');
+  makeLineChart('activeChart',  activeLabels,  activeData,   'Activos');
+  makeBarChart('geoChart',      geoLabels,     geoData,       'Usuarios');
+</script>
+
+<%- include('partials/footer') %>

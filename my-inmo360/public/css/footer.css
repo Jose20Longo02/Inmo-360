@@ -1,0 +1,110 @@
+/* footer.css — Namespace inmo360-… para evitar conflictos */
+
+/* Sticky footer dinámico: convierte body en flex solo si tiene footer.inmo360-footer */
+body:has(> footer.inmo360-footer) {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh; /* fuerza altura completa de la ventana */
+}
+
+/* Footer contenedor */
+.inmo360-footer {
+  background: #1a1a1a;
+  color: #eee;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  font-family: Arial, sans-serif;
+  width: 100%;
+  margin-top: auto; /* empuja al footer al fondo cuando hay espacio */
+}
+
+/* Links */
+.inmo360-footer a {
+  color: white;
+  text-decoration: none;
+  font-weight: 200;
+  transition: color 0.2s;
+}
+.inmo360-footer a:hover {
+  color: #fff;
+}
+.inmo360-about img{
+  max-width: 200px;
+}
+
+/* Parte superior: grid de columnas adaptadas al contenido */
+.inmo360-footer-top {
+  display: grid;
+  grid-template-columns: repeat(4, auto);
+  column-gap: 2rem;
+  row-gap: 2rem;
+  padding: 3rem 1.5rem 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Columnas genéricas */
+.inmo360-footer-column {
+  padding: 0 1rem;
+}
+.inmo360-footer-column h4 {
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+  color: #fff;
+}
+.inmo360-footer-column ul {
+  list-style: none;
+  padding: 0;
+}
+.inmo360-footer-column li {
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+.inmo360-footer-column p {
+  margin: 0.5rem 0;
+  font-size: 0.9rem;
+}
+
+/* Íconos sociales */
+.inmo360-social-icons {
+  display: flex;
+  gap: 0.75rem;
+}
+.inmo360-social-icons img {
+  width: 30px;
+  height: 30px;
+  transition: filter 0.2s;
+}
+.inmo360-social-icons a:hover img {
+  filter: invert(0.5) sepia(1) hue-rotate(175deg) saturate(5);
+}
+
+/* Pie de página */
+.inmo360-footer-bottom {
+  padding: 1rem 1.5rem;
+  text-align: center;
+  background: #1a1a1a;
+}
+
+/* Responsive tablets */
+@media (max-width: 900px) {
+  .inmo360-footer-top {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Responsive móviles */
+@media (max-width: 600px) {
+  .inmo360-footer-top {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    padding: 2rem 1rem 1rem;
+  }
+  .inmo360-footer-column p,
+  .inmo360-footer-column li {
+    font-size: 0.85rem;
+  }
+  .inmo360-social-icons {
+    justify-content: flex-start;
+  }
+}

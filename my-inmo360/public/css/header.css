@@ -251,11 +251,12 @@
   bottom: -4px;         /* abajo de la campana */
   right: -4px;          /* a la derecha de la campana */
   background: red;
+  width: 15px;
+  height: 15px;
   color: #fff;
   border-radius: 50%;
-  padding: 0 6px;
+  padding: 2px 1px;
   font-size: 0.7rem;
-  line-height: 1;
 }
 
 /* Dropdown */
@@ -318,9 +319,11 @@
   bottom: -4px;         /* abajo de la campana */
   right: -4px;          /* a la derecha de la campana */
   background: red;
+  width: 15px;
+  height: 15px;
   color: #fff;
   border-radius: 50%;
-  padding: 0 6px;
+  padding: 2px 1px;
   font-size: 0.7rem;
   line-height: 1;
 }

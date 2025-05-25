@@ -6,97 +6,193 @@
     font-family: Arial, sans-serif;
   }
 
-/* Contenedor principal */
-.agency-detail-container {
-    max-width: 900px;
-    margin: 3rem auto;
-    padding: 2rem;
-    background: #fff;
-    border-radius: 8px;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+/* Reset básico y variables */
+.agency-detail-container,
+.agency-detail-container * {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: Arial, sans-serif;
+}
+a { text-decoration: none; color: inherit; }
+img { display: block; width: 100%; height: auto; }
 
-    color: #333;
+/* Contenedor general */
+.agency-detail-container {
+  max-width: 1200px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+/* Header */
+.agency-header {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+.agency-logo {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 2px solid #ddd;
+}
+.agency-placeholder-logo {
+  width: 80px;
+  height: 80px;
+  background: #eee;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #777;
+}
+.agency-meta h1 {
+  font-size: 1.8rem;
+  font-weight: 400;
+  margin-bottom: .25rem;
+}
+.agency-meta p {
+  font-size: .95rem;
+  color: #555;
+  margin-bottom: .15rem;
+}
+.agency-meta span {
+  font-weight: 400;
+  color: #222;
+}
+
+/* Layout columnas */
+.agency-content {
+  display: grid;
+  grid-template-columns: 3fr 1fr;
+  gap: 2rem;
+}
+@media(max-width: 900px) {
+  .agency-content { grid-template-columns: 1fr; }
+}
+
+/* --- Propiedades --- */
+.properties-section h2 {
+  font-size: 1.5rem;
+  font-weight: 100;
+  margin-bottom: 1rem;
+}
+.properties-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.5rem;
+}
+.property-card {
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  transition: transform .2s;
+}
+.property-card:hover {
+  transform: translateY(-4px);
+}
+.property-card .card-image {
+  height: 140px;
+  overflow: hidden;
+}
+.property-card .card-image img {
+  object-fit: cover;
+  height: 100%;
+}
+.property-card .card-body {
+  padding: 1rem;
+}
+.property-card h3 {
+  font-size: 1.1rem;
+  margin-bottom: .5rem;
+  font-weight: 100;
+  color: #222;
+}
+.card-location,
+.card-price,
+.card-agent {
+  font-size: .9rem;
+  color: #555;
+  margin-bottom: .25rem;
+}
+.card-price {
+  color: black;
+  font-weight: bold;
+}
+
+/* Paginación */
+.pagination {
+  margin-top: 1.5rem;
+  text-align: center;
+}
+.pagination .page-link {
+  display: inline-block;
+  margin: 0 .25rem;
+  padding: .4rem .8rem;
+  border-radius: 4px;
+  background: #f0f0f0;
+  color: #333;
+  transition: background .2s;
+}
+.pagination .page-link.active,
+.pagination .page-link:hover {
+  background: #75FBD3;
+  color: #000;
+}
+
+/* Mensajes vacíos */
+.no-properties,
+.no-agents {
+  color: #777;
+  font-style: italic;
+}
+
+/* --- Sidebar de Agentes --- */
+.agents-sidebar {
+  background: #fff;
+  border-radius: 8px;
+  padding: 1rem;
+  box-shadow: inset 0 2px 8px rgba(0,0,0,0.05);
+}
+.agents-sidebar h2 {
+  font-size: 1.25rem;
+  margin-bottom: 1rem;
+  color: #222;
+}
+.agents-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: .75rem;
+}
+.agent-card {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+}
+.agent-card img {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #75FBD3;
+}
+.agent-card p {
+  font-size: .95rem;
+  color: #333;
+}
+
+/* Responsive adjustments */
+@media(max-width: 600px) {
+  .properties-grid { grid-template-columns: 1fr; }
+  .agency-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
   }
-  
-  /* Título */
-  .agency-detail-container h2 {
-    margin-bottom: 1.5rem;
-    font-size: 1.8rem;
-    text-align: center;
-  }
-  
-  /* Info de la agencia */
-  .agency-info {
-    display: flex;
-    align-items: center;
-    gap: 1.5rem;
-    margin-bottom: 2rem;
-    flex-wrap: wrap;
-  }
-  
-  .agency-logo {
-    width: 100px;
-    height: 100px;
-    object-fit: contain;
-    border: 2px solid #ddd;
-    border-radius: 8px;
-    background: #f9f9f9;
-  }
-  
-  .agency-info p {
-    margin: 0.3rem 0;
-    font-size: 1rem;
-  }
-  
-  /* Sección de propiedades */
-  .properties-section h3 {
-    margin-bottom: 1rem;
-    font-size: 1.4rem;
-  }
-  
-  .properties-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-  }
-  
-  .properties-list li {
-    margin-bottom: 0.8rem;
-  }
-  
-  .properties-list a {
-    text-decoration: none;
-    color: #007bff;
-    font-weight: 500;
-  }
-  
-  .properties-list a:hover {
-    text-decoration: underline;
-  }
-  
-  /* Paginación */
-  .pagination {
-    margin-top: 1.5rem;
-    text-align: center;
-  }
-  
-  .page-link {
-    display: inline-block;
-    margin: 0 0.3rem;
-    padding: 0.4rem 0.8rem;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    color: #333;
-    text-decoration: none;
-    font-size: 0.9rem;
-  }
-  
-  .page-link:hover {
-    background-color: #f0f0f0;
-  }
-  
-  .page-link.active {
-    background-color: #007bff;
-    border-color: #007bff;
-    color: #fff;
-  }
+}

@@ -1,0 +1,10 @@
+/* layout.css — Sólo para páginas que usan el footer “sticky” sin tocar html/body global */
+.inmo360-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh; /* ocupa toda la ventana */
+}
+
+.inmo360-main {
+  flex: 1; /* empuja el footer hacia abajo cuando falte contenido */
+}
