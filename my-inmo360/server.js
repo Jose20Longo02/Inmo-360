@@ -378,7 +378,7 @@ app.post('/admin/agencies/:id/aprobar', isAuthenticated, async (req, res) => {
         from: "Inmo360 <no-reply@inmo360.com>",
         to: userEmail,
         subject: 'Tu inmobiliaria ha sido aprobada',
-        text: `¡Felicidades! Tu inmobiliaria “${agency.name}” ya está activa en la plataforma.\n\nVisítala aquí: https://tu-dominio.com/inmobiliaria/${id}`
+        text: `¡Felicidades! Tu inmobiliaria “${agency.name}” ya está activa en la plataforma.\n\nSaludos Cordiales\nEquipo Inmo360.`
       });
     }
 
@@ -440,7 +440,7 @@ app.post('/admin/agencies/:id/rechazar', isAuthenticated, async (req, res) => {
         from: 'Inmo360 <no-reply@inmo360.com>',
         to: userEmail,
         subject: 'Tu inmobiliaria ha sido rechazada',
-        text: `Lo sentimos, tu inmobiliaria “${agency.name}” fue rechazada por el siguiente motivo:\n\n${motivo}\n\nPor favor, vuelve a completar el formulario aquí: https://tu-dominio.com/agencias/registro`
+        text: `Lo sentimos, tu inmobiliaria “${agency.name}” fue rechazada por el siguiente motivo:\n\n${motivo}\n\nPor favor, vuelve a completar el formulario.\n\nSaludos cordiales\nEquipo Inmo360`
       });
     }
 
