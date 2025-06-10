@@ -112,10 +112,9 @@ const uploadS3 = multer({
   limits,
 });
 
+// -------------- FUNCIONES PARA SPACES --------------
 
-
-
-
+// Convierte buffer HEIC si aplica y sube a Spaces usando s3v2
 async function processAndUploadToSpacesBuffer(buffer, originalName, userUuid, fieldName) {
   const ext = path.extname(originalName).toLowerCase();
   let finalBuffer = buffer;
@@ -143,9 +142,9 @@ async function processAndUploadToSpacesBuffer(buffer, originalName, userUuid, fi
   else if (fieldName === 'idBack')  filenameBase = `idBack-${timestamp}`;
   else filenameBase = `${timestamp}`;
   const key = `usuarios/${userUuid}/${filenameBase}${finalExt}`;
-  // subir a Spaces
+  // subir a Spaces usando s3v2 (no s3)
   try {
-    await s3.putObject({
+    await s3v2.putObject({
       Bucket: process.env.SPACES_BUCKET,
       Key: key,
       Body: finalBuffer,
@@ -160,20 +159,36 @@ async function processAndUploadToSpacesBuffer(buffer, originalName, userUuid, fi
   return `https://${process.env.SPACES_BUCKET}.${process.env.SPACES_ENDPOINT}/${key}`;
 }
 
+// Borra un objeto en Spaces o, si la URL es local (/uploads/…), borra el archivo en disco
 async function deleteFromSpacesByUrl(url) {
   try {
-    const prefix = `https://${process.env.SPACES_BUCKET}.${process.env.SPACES_ENDPOINT}/`;
-    if (!url.startsWith(prefix)) {
-      console.warn('URL no pertenece a este Space:', url);
-      return;
+    const spacesPrefix = `https://${process.env.SPACES_BUCKET}.${process.env.SPACES_ENDPOINT}/`;
+    if (url.startsWith(spacesPrefix)) {
+      // Borrar de Spaces usando s3v2
+      const key = url.substring(spacesPrefix.length);
+      await s3v2.deleteObject({
+        Bucket: process.env.SPACES_BUCKET,
+        Key: key
+      }).promise();
+      console.log(`Borrada de Spaces: ${key}`);
+    } else if (url.startsWith('/uploads/usuarios/')) {
+      // URL relativa local: borra el archivo en disco
+      const localPath = path.join(__dirname, 'public', url);
+      if (fs.existsSync(localPath)) {
+        try {
+          await fs.unlink(localPath);
+          console.log(`Borrada local: ${localPath}`);
+        } catch (e) {
+          console.error('Error borrando archivo local:', e);
+        }
+      } else {
+        console.warn('Archivo local no encontrado para borrar:', localPath);
+      }
+    } else {
+      console.warn('URL no pertenece a este Space ni es ruta local esperada:', url);
     }
-    const key = url.substring(prefix.length);
-    await s3.deleteObject({
-      Bucket: process.env.SPACES_BUCKET,
-      Key: key
-    }).promise();
   } catch (err) {
-    console.error('Error borrando en Spaces:', err);
+    console.error('Error borrando en deleteFromSpacesByUrl:', err);
   }
 }
 
