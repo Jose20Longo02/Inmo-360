@@ -1408,7 +1408,7 @@ app.get('/register', async (req, res) => {
 // POST /register — crear usuario y login automático, con primer usuario como admin y conversión HEIC
 // POST /register — crear usuario, login automático, primer usuario como admin y envío de email de bienvenido
 app.post('/register',
-  uploadMemory.fields([
+  upload.fields([
     { name: 'profilePic', maxCount: 1 },
     { name: 'idFront',     maxCount: 1 },
     { name: 'idBack',      maxCount: 1 }
@@ -1887,7 +1887,7 @@ app.get('/dashboard/profile', isAuthenticated, async (req, res) => {
 app.post(
   '/dashboard/profile',
   isAuthenticated,
-  uploadMemory.fields([
+  upload.fields([
     { name: 'profilePic', maxCount: 1 },
     { name: 'idFront', maxCount: 1 },
     { name: 'idBack', maxCount: 1 }
