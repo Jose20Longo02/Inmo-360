@@ -18,7 +18,9 @@
     line-height: 1.5;
     padding: 0.5rem 0.75rem;        /* ajusta a tu gusto */
     height: auto;                   /* para que crezca con padding+font */
-    border: 1px solid #ccc;         /* borde consistente */
+    border: 1px solid #ccc;
+    color: #000;  
+    font-weight: 200;      /* borde consistente */
     border-radius: 4px;
   }
   
