@@ -1280,7 +1280,12 @@ const agencyUpload = multer({
   }
 });
 
-app.post('/agencias/registro', agencyUpload.single('logo'), async (req, res) => {
+// Asegúrate de tener definido antes:
+// const uploadMemory = multer({ storage: multer.memoryStorage(), fileFilter: imageFileFilter, limits });
+// const s3v2 = new AWS.S3({ endpoint: new AWS.Endpoint(process.env.SPACES_ENDPOINT), accessKeyId: process.env.SPACES_KEY, secretAccessKey: process.env.SPACES_SECRET });
+// async function processAndUploadToSpacesBuffer(buffer, originalName, userUuid, fieldName) { ... } // con s3v2
+
+app.post('/agencias/registro', uploadMemory.single('logo'), async (req, res) => {
   const {
     name, email, phone, address,
     departamento, municipio,
@@ -1291,10 +1296,37 @@ app.post('/agencias/registro', agencyUpload.single('logo'), async (req, res) => 
   } = req.body;
 
   const userId = req.session.user.id;
-  const logoPath = req.file ? '/uploads/agencies/' + req.file.filename : null;
 
   try {
-    // 1) Insertar la nueva agencia en la base de datos
+    // 1) Obtener el UUID del usuario para usarlo como carpeta en Spaces
+    const userRes = await pool.query(
+      'SELECT uuid FROM users WHERE id = $1',
+      [userId]
+    );
+    if (userRes.rows.length === 0) {
+      return res.status(404).send('Usuario no encontrado.');
+    }
+    const userUuid = userRes.rows[0].uuid;
+
+    // 2) Procesar logo: si viene archivo, subir a Spaces
+    //    mantenemos la variable logoPath:
+    let logoPath = null;
+    if (req.file) {
+      try {
+        // sube a Spaces y devuelve URL pública:
+        logoPath = await processAndUploadToSpacesBuffer(
+          req.file.buffer,
+          req.file.originalname,
+          userUuid,
+          'agencyLogo'  // este nombre de campo solo para distinguir dentro de la función
+        );
+      } catch (uploadErr) {
+        console.error('Error subiendo logo a Spaces:', uploadErr);
+        return res.status(500).send('Error al subir el logo. Intenta de nuevo.');
+      }
+    }
+
+    // 3) Insertar la nueva agencia en la base de datos
     await pool.query(
       `INSERT INTO inmobiliarias
         (name,
@@ -1318,8 +1350,8 @@ app.post('/agencias/registro', agencyUpload.single('logo'), async (req, res) => 
         phone,
         address,
         departamento || null,
-        municipio      || null,
-        logoPath,
+        municipio || null,
+        logoPath,  // guardamos la URL en Spaces o null si no se subió
         solicitante_nombre,
         solicitante_puesto,
         solicitante_email,
@@ -1328,32 +1360,33 @@ app.post('/agencias/registro', agencyUpload.single('logo'), async (req, res) => 
       ]
     );
 
-    // 2) Obtener todos los administradores
+    // 4) Notificar a administradores
     const adminsRes = await pool.query(
       `SELECT email FROM users WHERE rol = 'admin' AND email IS NOT NULL`
     );
     const adminEmails = adminsRes.rows.map(r => r.email);
-
-    // 3) Enviar correo a cada admin
     if (adminEmails.length > 0) {
-      await transporter.sendMail({
-        from: "Inmo360 <no-reply@inmo360.com>",
-        to: adminEmails, // array de correos
-        subject: 'Nueva inmobiliaria pendiente de revisión',
-        text: `Se ha registrado una nueva agencia: "${name}".\n\n` +
-              `Solicitante: ${solicitante_nombre} (${solicitante_puesto}).\n` +
-              `Revisa la solicitud en el panel de administración: https://tu-dominio.com/admin/agencies`
-      });
+      try {
+        await transporter.sendMail({
+          from: "Inmo360 <no-reply@inmo360.com>",
+          to: adminEmails,
+          subject: 'Nueva inmobiliaria pendiente de revisión',
+          text: `Se ha registrado una nueva agencia: "${name}".\n\n` +
+                `Solicitante: ${solicitante_nombre} (${solicitante_puesto}).\n` +
+                `Revisa la solicitud en el panel de administración: https://tu-dominio.com/admin/agencies`
+        });
+      } catch (mailErr) {
+        console.error('Error enviando correo a admins:', mailErr);
+      }
     }
 
-    // 4) Redirigir al dashboard con éxito
+    // 5) Redirigir al dashboard con éxito
     res.redirect('/dashboard?success=solicitud_enviada');
   } catch (err) {
     console.error('Error registrando inmobiliaria:', err);
     res.status(500).send('Error al registrar inmobiliaria');
   }
 });
-
 
 
 
@@ -2411,9 +2444,9 @@ app.post('/properties/delete/:id', isAuthenticated, async (req, res) => {
   const userId = req.session.user.id;
 
   try {
-    // 1) Obtener el folder_uuid y asegurarnos de que la propiedad pertenece al usuario
+    // 1) Obtener la propiedad y asegurarnos de que pertenece al usuario
     const result = await pool.query(
-      `SELECT folder_uuid 
+      `SELECT folder_uuid, imagenes_urls, video_url, plano_url
          FROM propiedades 
         WHERE id = $1 
           AND user_id = $2`,
@@ -2425,21 +2458,61 @@ app.post('/properties/delete/:id', isAuthenticated, async (req, res) => {
       return res.status(404).send('Propiedad no encontrada o no tienes permiso para borrarla.');
     }
 
-    const { folder_uuid: folderUuid } = result.rows[0];
-    const folderPath = path.join(__dirname, 'public', 'uploads', 'propiedades', folderUuid);
+    const { folder_uuid: folderUuid, imagenes_urls, video_url, plano_url } = result.rows[0];
 
-    // 2) Eliminar la carpeta con todos los archivos (Node 14+)
-    if (fs.existsSync(folderPath)) {
-      fs.rmSync(folderPath, { recursive: true, force: true });
+    // 2) Eliminar archivos en Spaces: imágenes, video y plano
+    //    Asumimos que deleteFromSpacesByUrl está definido en tu código y usa s3v2
+    let urls = [];
+    if (imagenes_urls) {
+      if (typeof imagenes_urls === 'string') {
+        try {
+          const arr = JSON.parse(imagenes_urls);
+          if (Array.isArray(arr)) {
+            urls = urls.concat(arr);
+          }
+        } catch (e) {
+          console.warn('No se pudo parsear imagenes_urls:', e);
+        }
+      } else if (Array.isArray(imagenes_urls)) {
+        urls = urls.concat(imagenes_urls);
+      }
+    }
+    if (video_url) {
+      urls.push(video_url);
+    }
+    if (plano_url) {
+      urls.push(plano_url);
     }
 
-    // 3) Borrar el registro de la base de datos
+    for (const fileUrl of urls) {
+      try {
+        await deleteFromSpacesByUrl(fileUrl);
+      } catch (err) {
+        console.error('Error borrando en Spaces URL:', fileUrl, err);
+        // Continuar con los siguientes, no interrumpir toda la operación
+      }
+    }
+
+    // 3) Eliminar la carpeta local con todos los archivos (si usas copias locales)
+    const folderPath = path.join(__dirname, 'public', 'uploads', 'propiedades', folderUuid);
+    if (fs.existsSync(folderPath)) {
+      try {
+        fs.rmSync(folderPath, { recursive: true, force: true });
+        console.log(`Carpeta local eliminada: ${folderPath}`);
+      } catch (e) {
+        console.error('Error eliminando carpeta local:', e);
+      }
+    } else {
+      console.log(`Carpeta local no encontrada para borrar: ${folderPath}`);
+    }
+
+    // 4) Borrar el registro de la base de datos
     await pool.query(
       `DELETE FROM propiedades WHERE id = $1`,
       [id]
     );
 
-    // 4) Redirigir de vuelta al listado
+    // 5) Redirigir de vuelta al listado
     res.redirect('/properties');
   } catch (err) {
     console.error('Error al eliminar propiedad:', err);
