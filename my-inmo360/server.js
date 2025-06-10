@@ -116,6 +116,9 @@ const uploadS3 = multer({
 
 // Convierte buffer HEIC si aplica y sube a Spaces usando s3v2
 async function processAndUploadToSpacesBuffer(buffer, originalName, userUuid, fieldName) {
+  if (!process.env.SPACES_BUCKET) {
+    throw new Error('SPACES_BUCKET no está configurado');
+  }
   const ext = path.extname(originalName).toLowerCase();
   let finalBuffer = buffer;
   let finalExt = ext;
@@ -142,7 +145,7 @@ async function processAndUploadToSpacesBuffer(buffer, originalName, userUuid, fi
   else if (fieldName === 'idBack')  filenameBase = `idBack-${timestamp}`;
   else filenameBase = `${timestamp}`;
   const key = `usuarios/${userUuid}/${filenameBase}${finalExt}`;
-  // subir a Spaces usando s3v2 (no s3)
+  // subir a Spaces usando s3v2
   try {
     await s3v2.putObject({
       Bucket: process.env.SPACES_BUCKET,
@@ -151,8 +154,13 @@ async function processAndUploadToSpacesBuffer(buffer, originalName, userUuid, fi
       ACL: 'public-read',
       ContentType: `image/${finalExt.replace(/^\./,'')}`
     }).promise();
+    console.log(`Subido a Spaces: ${key}`);
   } catch (err) {
     console.error('Error subiendo a Spaces:', err);
+    // Si es NoSuchBucket, menciona el bucket para facilitar debug
+    if (err.code === 'NoSuchBucket') {
+      console.error(`Bucket no encontrado: ${process.env.SPACES_BUCKET}`);
+    }
     throw err;
   }
   // URL pública
@@ -166,11 +174,15 @@ async function deleteFromSpacesByUrl(url) {
     if (url.startsWith(spacesPrefix)) {
       // Borrar de Spaces usando s3v2
       const key = url.substring(spacesPrefix.length);
-      await s3v2.deleteObject({
-        Bucket: process.env.SPACES_BUCKET,
-        Key: key
-      }).promise();
-      console.log(`Borrada de Spaces: ${key}`);
+      try {
+        await s3v2.deleteObject({
+          Bucket: process.env.SPACES_BUCKET,
+          Key: key
+        }).promise();
+        console.log(`Borrada de Spaces: ${key}`);
+      } catch (e) {
+        console.error('Error borrando objeto en Spaces:', e);
+      }
     } else if (url.startsWith('/uploads/usuarios/')) {
       // URL relativa local: borra el archivo en disco
       const localPath = path.join(__dirname, 'public', url);
@@ -188,10 +200,9 @@ async function deleteFromSpacesByUrl(url) {
       console.warn('URL no pertenece a este Space ni es ruta local esperada:', url);
     }
   } catch (err) {
-    console.error('Error borrando en deleteFromSpacesByUrl:', err);
+    console.error('Error en deleteFromSpacesByUrl:', err);
   }
 }
-
 
 
 
