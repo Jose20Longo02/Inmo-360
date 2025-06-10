@@ -58,11 +58,6 @@ app.use((req, res, next) => {
 // CONFIGURACIÓN MULTER PARA DIGITALOCEAN SPACES
 // =========================
 
-const AWS = require('aws-sdk');
-const multer = require('multer');
-const multerS3 = require('multer-s3');
-const path = require('path');
-
 // 1) Configurar cliente S3 v2 apuntando a DigitalOcean Spaces
 //    PROCESS ENV debe tener:
 //      SPACES_ENDPOINT (ej. 'nyc3.digitaloceanspaces.com' u otro endpoint que te provea DO)
