@@ -1285,6 +1285,8 @@ const agencyUpload = multer({
 // const s3v2 = new AWS.S3({ endpoint: new AWS.Endpoint(process.env.SPACES_ENDPOINT), accessKeyId: process.env.SPACES_KEY, secretAccessKey: process.env.SPACES_SECRET });
 // async function processAndUploadToSpacesBuffer(buffer, originalName, userUuid, fieldName) { ... } // con s3v2
 
+// Reemplaza o ajusta esta ruta en tu server.js / app.js
+
 app.post('/agencias/registro', uploadMemory.single('logo'), async (req, res) => {
   const {
     name, email, phone, address,
@@ -1297,37 +1299,12 @@ app.post('/agencias/registro', uploadMemory.single('logo'), async (req, res) => 
 
   const userId = req.session.user.id;
 
+  // Para almacenar el logo temporalmente; luego lo subiremos y actualizaremos el registro
+  let logoPath = null;
+
   try {
-    // 1) Obtener el UUID del usuario para usarlo como carpeta en Spaces
-    const userRes = await pool.query(
-      'SELECT uuid FROM users WHERE id = $1',
-      [userId]
-    );
-    if (userRes.rows.length === 0) {
-      return res.status(404).send('Usuario no encontrado.');
-    }
-    const userUuid = userRes.rows[0].uuid;
-
-    // 2) Procesar logo: si viene archivo, subir a Spaces
-    //    mantenemos la variable logoPath:
-    let logoPath = null;
-    if (req.file) {
-      try {
-        // sube a Spaces y devuelve URL pública:
-        logoPath = await processAndUploadToSpacesBuffer(
-          req.file.buffer,
-          req.file.originalname,
-          userUuid,
-          'agencyLogo'  // este nombre de campo solo para distinguir dentro de la función
-        );
-      } catch (uploadErr) {
-        console.error('Error subiendo logo a Spaces:', uploadErr);
-        return res.status(500).send('Error al subir el logo. Intenta de nuevo.');
-      }
-    }
-
-    // 3) Insertar la nueva agencia en la base de datos
-    await pool.query(
+    // 1) Insertar la nueva agencia sin logo_url (logo_url NULL)
+    const insertRes = await pool.query(
       `INSERT INTO inmobiliarias
         (name,
          email,
@@ -1343,7 +1320,8 @@ app.post('/agencias/registro', uploadMemory.single('logo'), async (req, res) => 
          created_by,
          estado)
       VALUES
-        ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'pendiente')`,
+        ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'pendiente')
+      RETURNING id`,
       [
         name,
         email,
@@ -1351,7 +1329,7 @@ app.post('/agencias/registro', uploadMemory.single('logo'), async (req, res) => 
         address,
         departamento || null,
         municipio || null,
-        logoPath,  // guardamos la URL en Spaces o null si no se subió
+        null,  // logo_url inicialmente null
         solicitante_nombre,
         solicitante_puesto,
         solicitante_email,
@@ -1359,8 +1337,62 @@ app.post('/agencias/registro', uploadMemory.single('logo'), async (req, res) => 
         userId
       ]
     );
+    const agencyId = insertRes.rows[0].id;
 
-    // 4) Notificar a administradores
+    // 2) Si vino archivo de logo, subirlo a Spaces bajo agencies/<agencyId>/
+    if (req.file) {
+      const file = req.file;
+      try {
+        // Leer buffer y nombre original
+        let buffer = file.buffer;
+        let originalName = file.originalname;
+        let ext = path.extname(originalName).toLowerCase();
+        // Si HEIC/HEIF: convertir a JPEG
+        if (ext === '.heic' || ext === '.heif') {
+          try {
+            const outputBuffer = await heicConvert({
+              buffer,
+              format: 'JPEG',
+              quality: 1
+            });
+            buffer = outputBuffer;
+            ext = '.jpg';
+            // ajustar nombre
+            originalName = path.basename(originalName, path.extname(originalName)) + ext;
+          } catch (convErr) {
+            console.error('Error conversión HEIC de logo:', convErr);
+            // seguir con buffer/originalName original
+          }
+        }
+        // Generar key en Spaces: agencies/<agencyId>/logo-<timestamp><ext>
+        const timestamp = Date.now();
+        const safeBase = path.basename(originalName).replace(/\s+/g, '_');
+        const key = `agencies/${agencyId}/logo-${timestamp}-${safeBase}`;
+
+        // Subir a Spaces usando s3v2
+        await s3v2.putObject({
+          Bucket: process.env.SPACES_BUCKET,
+          Key: key,
+          Body: buffer,
+          ACL: 'public-read',
+          ContentType: file.mimetype || `image/${ext.replace(/^\./, '')}`
+        }).promise();
+
+        // Construir URL pública
+        logoPath = `https://${process.env.SPACES_BUCKET}.${process.env.SPACES_ENDPOINT}/${key}`;
+        // 3) Actualizar el registro de la agencia con el logo_url
+        await pool.query(
+          `UPDATE inmobiliarias SET logo_url = $1 WHERE id = $2`,
+          [logoPath, agencyId]
+        );
+      } catch (uploadErr) {
+        console.error('Error subiendo logo de agencia a Spaces:', uploadErr);
+        // No abortamos; la agencia ya se creó con logo null. Puedes decidir alertar al usuario:
+        // Por ahora solo se registra el error en consola.
+      }
+    }
+
+    // 4) Obtener todos los administradores y notificarles
     const adminsRes = await pool.query(
       `SELECT email FROM users WHERE rol = 'admin' AND email IS NOT NULL`
     );
@@ -1369,14 +1401,14 @@ app.post('/agencias/registro', uploadMemory.single('logo'), async (req, res) => 
       try {
         await transporter.sendMail({
           from: "Inmo360 <no-reply@inmo360.com>",
-          to: adminEmails,
+          to: adminEmails, // array de correos
           subject: 'Nueva inmobiliaria pendiente de revisión',
           text: `Se ha registrado una nueva agencia: "${name}".\n\n` +
                 `Solicitante: ${solicitante_nombre} (${solicitante_puesto}).\n` +
                 `Revisa la solicitud en el panel de administración: https://tu-dominio.com/admin/agencies`
         });
       } catch (mailErr) {
-        console.error('Error enviando correo a admins:', mailErr);
+        console.error('Error enviando email a admins sobre nueva agencia:', mailErr);
       }
     }
 
@@ -1384,6 +1416,7 @@ app.post('/agencias/registro', uploadMemory.single('logo'), async (req, res) => 
     res.redirect('/dashboard?success=solicitud_enviada');
   } catch (err) {
     console.error('Error registrando inmobiliaria:', err);
+    // Si se creó el registro pero falló antes de subir logo, la agencia ya existe con logo_url NULL.
     res.status(500).send('Error al registrar inmobiliaria');
   }
 });
