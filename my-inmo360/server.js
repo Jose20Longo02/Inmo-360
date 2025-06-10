@@ -57,28 +57,23 @@ app.use((req, res, next) => {
 // =========================
 // CONFIGURACIÓN MULTER
 // =========================
-
 // Configurar cliente S3 apuntando a DigitalOcean Spaces
 const spacesEndpoint = new AWS.Endpoint(process.env.SPACES_ENDPOINT);
-// Opcionalmente puedes añadir region si tu Space lo requiere, aunque generalmente no es estrictamente necesario:
-// const s3 = new AWS.S3({ endpoint: spacesEndpoint, region: 'us-east-1', ... });
 const s3 = new AWS.S3({
   endpoint: spacesEndpoint,
   accessKeyId: process.env.SPACES_KEY,
   secretAccessKey: process.env.SPACES_SECRET,
 });
 
-// Helper para generar la clave (key) en el bucket. 
-// Puedes ajustar la carpeta según tu lógica. Por ejemplo, para usuarios: `usuarios/${userUuid}/...`
-// o para propiedades: `propiedades/${folderUuid}/...`. Aquí se muestra un ejemplo genérico.
+// Helper para generar la clave (key) en el bucket
 function makeS3Key(prefixFolder, originalName) {
-  // Sanitiza el nombre si quieres. Ej: elimina espacios, caracteres raros, etc.
   const timestamp = Date.now();
+  // Reemplaza espacios por '_' y elimina caracteres inválidos si quieres
   const baseName = path.basename(originalName).replace(/\s+/g, '_');
   return `${prefixFolder}/${timestamp}-${baseName}`;
 }
 
-// File filter: aceptar solo imágenes (incluyendo HEIC/HEIF si el navegador envía mimetype image/heic o similar).
+// File filter: aceptar solo imágenes (incluyendo HEIC/HEIF si el navegador envía mimetype image/heic)
 function fileFilter(req, file, cb) {
   if (file.mimetype.startsWith('image/')) {
     cb(null, true);
@@ -92,8 +87,7 @@ const limits = {
   fileSize: 8 * 1024 * 1024, // 8 MB por archivo
 };
 
-// Ejemplo de configuración de multer-S3 para uploads genéricos.
-// Dependiendo de la ruta, puedes cambiar el prefijoFolder con req.uploadFolderUuid o con el ID de usuario.
+// Middleware upload con multer-s3
 const upload = multer({
   storage: multerS3({
     s3,
@@ -101,22 +95,17 @@ const upload = multer({
     acl: 'public-read',
     contentType: multerS3.AUTO_CONTENT_TYPE,
     key: function (req, file, cb) {
-      // Aquí decides la carpeta en el bucket. Por ejemplo:
-      // Si estás en /register o /dashboard/profile, puedes usar un UUID generado:
-      //   const userUuid = req.uploadFolderUuid || req.session.user.uuid;
-      // Para propiedades, usas req.uploadFolderUuid en la ruta /properties/new.
-      // A modo de ejemplo, detectamos si req.uploadFolderUuid existe:
       let prefix;
+      // Ejemplo: si definiste req.uploadFolderUuid en rutas de propiedades:
       if (req.uploadFolderUuid) {
-        // en rutas de propiedades
         prefix = `propiedades/${req.uploadFolderUuid}`;
-      } else if (req.session && req.session.user && req.session.user.id) {
-        // en rutas de usuario (por ejemplo profile), puedes usar el ID o un UUID en sesión
-        // Si guardas el UUID en la sesión (req.session.user.uuid), úsalo:
+      }
+      // Si estás en perfil de usuario (sesión activa y guardas UUID en sesión):
+      else if (req.session && req.session.user) {
         const userUuid = req.session.user.uuid || `user-${req.session.user.id}`;
         prefix = `usuarios/${userUuid}`;
-      } else {
-        // fallback temporal
+      }
+      else {
         prefix = `temp`;
       }
       const key = makeS3Key(prefix, file.originalname);
@@ -126,6 +115,13 @@ const upload = multer({
   fileFilter,
   limits,
 });
+
+// Exporta o usa `upload` en tus rutas, por ejemplo:
+// app.post('/register', upload.fields([{ name: 'profilePic', maxCount: 1 }, ...]), async (req, res) => { ... });
+// app.post('/dashboard/profile', upload.fields([...]), ...);
+// app.post('/properties/new', upload.fields([{ name: 'imagenes', maxCount: 10 }, ...]), ...);
+
+module.exports = upload;
 
 
 
