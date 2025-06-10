@@ -58,8 +58,6 @@ app.use((req, res, next) => {
 // CONFIGURACIÓN MULTER
 // =========================
 
-// 1) Middleware: subir en memoria (para procesar buffer antes de subir a Spaces)
-//    Útil en /register o /dashboard/profile si conviertes HEIC y luego subes manualmente.
 function imageFileFilter(req, file, cb) {
   if (file.mimetype.startsWith('image/')) cb(null, true);
   else cb(new Error('Formato no soportado: solo imágenes'), false);
@@ -79,6 +77,9 @@ const s3v2 = new AWS.S3({
   accessKeyId: process.env.SPACES_KEY,
   secretAccessKey: process.env.SPACES_SECRET,
 });
+// Verifica en logs qué bucket y endpoint se están usando:
+console.log('⛅ SPACES_BUCKET:', process.env.SPACES_BUCKET);
+console.log('⛅ SPACES_ENDPOINT:', process.env.SPACES_ENDPOINT);
 
 // Helper para generar key en Spaces
 function makeS3Key(prefixFolder, originalName) {
@@ -87,7 +88,7 @@ function makeS3Key(prefixFolder, originalName) {
   return `${prefixFolder}/${timestamp}-${baseName}`;
 }
 
-// 3) Middleware: subir directo a Spaces/S3 con multer-s3
+// 3) Middleware: subir directo a Spaces/S3 con multer-s3 (si lo usas en alguna ruta)
 const uploadS3 = multer({
   storage: multerS3({
     s3: s3v2,
@@ -112,13 +113,8 @@ const uploadS3 = multer({
   limits,
 });
 
-// -------------- FUNCIONES PARA SPACES --------------
-
-// Convierte buffer HEIC si aplica y sube a Spaces usando s3v2
+// Función para subir un buffer a Spaces usando s3v2
 async function processAndUploadToSpacesBuffer(buffer, originalName, userUuid, fieldName) {
-  if (!process.env.SPACES_BUCKET) {
-    throw new Error('SPACES_BUCKET no está configurado');
-  }
   const ext = path.extname(originalName).toLowerCase();
   let finalBuffer = buffer;
   let finalExt = ext;
@@ -145,62 +141,70 @@ async function processAndUploadToSpacesBuffer(buffer, originalName, userUuid, fi
   else if (fieldName === 'idBack')  filenameBase = `idBack-${timestamp}`;
   else filenameBase = `${timestamp}`;
   const key = `usuarios/${userUuid}/${filenameBase}${finalExt}`;
+
+  // Verificar que la variable de entorno SPACES_BUCKET esté definida
+  const bucketName = process.env.SPACES_BUCKET;
+  if (!bucketName) {
+    throw new Error('SPACES_BUCKET no está definido en las variables de entorno');
+  }
+
   // subir a Spaces usando s3v2
   try {
+    console.log(`⛅ Subiendo a Spaces: bucket=${bucketName}, key=${key}`);
     await s3v2.putObject({
-      Bucket: process.env.SPACES_BUCKET,
+      Bucket: bucketName,
       Key: key,
       Body: finalBuffer,
       ACL: 'public-read',
       ContentType: `image/${finalExt.replace(/^\./,'')}`
     }).promise();
-    console.log(`Subido a Spaces: ${key}`);
   } catch (err) {
-    console.error('Error subiendo a Spaces:', err);
-    // Si es NoSuchBucket, menciona el bucket para facilitar debug
+    // Si es NoSuchBucket, loguear con más detalle
     if (err.code === 'NoSuchBucket') {
-      console.error(`Bucket no encontrado: ${process.env.SPACES_BUCKET}`);
+      console.error(`Bucket no encontrado: ${bucketName}`, err);
+    } else {
+      console.error('Error subiendo a Spaces:', err);
     }
     throw err;
   }
   // URL pública
-  return `https://${process.env.SPACES_BUCKET}.${process.env.SPACES_ENDPOINT}/${key}`;
+  return `https://${bucketName}.${process.env.SPACES_ENDPOINT}/${key}`;
 }
 
-// Borra un objeto en Spaces o, si la URL es local (/uploads/…), borra el archivo en disco
 async function deleteFromSpacesByUrl(url) {
   try {
-    const spacesPrefix = `https://${process.env.SPACES_BUCKET}.${process.env.SPACES_ENDPOINT}/`;
-    if (url.startsWith(spacesPrefix)) {
-      // Borrar de Spaces usando s3v2
-      const key = url.substring(spacesPrefix.length);
-      try {
-        await s3v2.deleteObject({
-          Bucket: process.env.SPACES_BUCKET,
-          Key: key
-        }).promise();
-        console.log(`Borrada de Spaces: ${key}`);
-      } catch (e) {
-        console.error('Error borrando objeto en Spaces:', e);
-      }
-    } else if (url.startsWith('/uploads/usuarios/')) {
-      // URL relativa local: borra el archivo en disco
-      const localPath = path.join(__dirname, 'public', url);
-      if (fs.existsSync(localPath)) {
-        try {
-          await fs.unlink(localPath);
-          console.log(`Borrada local: ${localPath}`);
-        } catch (e) {
-          console.error('Error borrando archivo local:', e);
-        }
-      } else {
-        console.warn('Archivo local no encontrado para borrar:', localPath);
-      }
-    } else {
-      console.warn('URL no pertenece a este Space ni es ruta local esperada:', url);
+    const bucketName = process.env.SPACES_BUCKET;
+    if (!bucketName) {
+      console.warn('SPACES_BUCKET no está definido, no se puede borrar en Spaces.');
+      return;
     }
+    const prefix = `https://${bucketName}.${process.env.SPACES_ENDPOINT}/`;
+    if (!url.startsWith(prefix)) {
+      console.warn('URL no pertenece a este Space, se omite borrado en Spaces:', url);
+      return;
+    }
+    const key = url.substring(prefix.length);
+    console.log(`⛅ Borrando de Spaces: bucket=${bucketName}, key=${key}`);
+    await s3v2.deleteObject({
+      Bucket: bucketName,
+      Key: key
+    }).promise();
   } catch (err) {
-    console.error('Error en deleteFromSpacesByUrl:', err);
+    console.error('Error borrando en Spaces:', err);
+  }
+}
+
+// Ejemplo de borrado local de un fichero previo (en tu ruta de actualizar perfil):
+function deleteLocalFileIfExists(localPath) {
+  if (fs.existsSync(localPath)) {
+    try {
+      fs.unlinkSync(localPath);
+      console.log('✅ Archivo local eliminado:', localPath);
+    } catch (err) {
+      console.error('Error eliminando archivo local:', err);
+    }
+  } else {
+    console.warn('Archivo local no encontrado para borrar:', localPath);
   }
 }
 
