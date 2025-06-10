@@ -1,13 +1,9 @@
 // server.js
 const express = require('express');
-const AWS = require('aws-sdk');
-const multerS3 = require('multer-s3');
-const path = require('path');
 const session = require('express-session');
 const bodyParser = require('body-parser');
 const bcrypt = require('bcrypt');
 const saltRounds = 10;
-const multer = require('multer');
 const pool = require('./db');
 const methodOverride = require('method-override');
 const locationsData = require('./locations');
@@ -55,11 +51,16 @@ app.use((req, res, next) => {
 });
 
 // =========================
-// CONFIGURACIÓN MULTER PARA DIGITALOCEAN SPACES
+// CONFIGURACIÓN MULTER
 // =========================
+const multer = require('multer');
+const multerS3 = require('multer-s3');
+const AWS = require('aws-sdk');
+const path = require('path');
 
-// uploadMemory.js  
-function fileFilter(req, file, cb) {
+// 1) Middleware: subir en memoria (para procesar buffer antes de subir a Spaces)
+//    Útil en /register o /dashboard/profile si conviertes HEIC y luego subes manualmente.
+function imageFileFilter(req, file, cb) {
   if (file.mimetype.startsWith('image/')) cb(null, true);
   else cb(new Error('Formato no soportado: solo imágenes'), false);
 }
@@ -67,15 +68,11 @@ const limits = { fileSize: 8 * 1024 * 1024 }; // 8 MB
 
 const uploadMemory = multer({
   storage: multer.memoryStorage(),
-  fileFilter,
+  fileFilter: imageFileFilter,
   limits,
 });
 
-module.exports = uploadMemory;
-
-
-
-// Configurar cliente S3 v2 para DigitalOcean Spaces
+// 2) Configurar cliente S3 v2 para DigitalOcean Spaces
 const spacesEndpoint = new AWS.Endpoint(process.env.SPACES_ENDPOINT);
 const s3v2 = new AWS.S3({
   endpoint: spacesEndpoint,
@@ -83,17 +80,14 @@ const s3v2 = new AWS.S3({
   secretAccessKey: process.env.SPACES_SECRET,
 });
 
+// Helper para generar key en Spaces
 function makeS3Key(prefixFolder, originalName) {
   const timestamp = Date.now();
   const baseName = path.basename(originalName).replace(/\s+/g, '_');
   return `${prefixFolder}/${timestamp}-${baseName}`;
 }
 
-function fileFilter(req, file, cb) {
-  if (file.mimetype.startsWith('image/')) cb(null, true);
-  else cb(new Error('Formato no soportado: solo imágenes'), false);
-}
-
+// 3) Middleware: subir directo a Spaces/S3 con multer-s3
 const uploadS3 = multer({
   storage: multerS3({
     s3: s3v2,
@@ -114,11 +108,9 @@ const uploadS3 = multer({
       cb(null, key);
     }
   }),
-  fileFilter,
+  fileFilter: imageFileFilter,
   limits,
 });
-
-module.exports = uploadS3;
 
 
 
