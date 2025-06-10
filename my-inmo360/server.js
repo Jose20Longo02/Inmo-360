@@ -1576,142 +1576,7 @@ app.post(
 
 // POST /register — crear usuario y, si viene el flag, redirigir a registrar agencia
 // Registro de usuarios — login automático tras crear cuenta
-// Endpoint para actualizar perfil de usuario
-app.post('/dashboard/profile', isAuthenticated, upload.fields([
-  { name: 'profilePic', maxCount: 1 },
-  { name: 'idFront', maxCount: 1 },
-  { name: 'idBack', maxCount: 1 }
-]), async (req, res) => {
-  try {
-    // Logs para depuración
-    console.log('🔥 PETICIÓN /dashboard/profile recibida');
-    console.log('FILES:', req.files);
-    console.log('BODY:',  req.body);
 
-    const userId = req.session.user.id;
-    const {
-      username,
-      email,
-      phone,
-      address,
-      city,
-      dept,
-      belongsToAgency,
-      agency
-    } = req.body;
-
-    // Asociación a inmobiliaria
-    const belongs = belongsToAgency === 'true';
-    const agencyId = belongs ? agency : null;
-
-    // Obtener datos actuales del usuario
-    const userResult = await pool.query(
-      'SELECT uuid, profile_pic, id_front, id_back FROM users WHERE id = $1',
-      [userId]
-    );
-    if (userResult.rows.length === 0) {
-      return res.status(404).send('Usuario no encontrado.');
-    }
-
-    const { uuid: userUuid, profile_pic: currentPic, id_front: currentFront, id_back: currentBack } = userResult.rows[0];
-    const userFolder = path.join(__dirname, 'public', 'uploads', 'usuarios', userUuid);
-    if (!fs.existsSync(userFolder)) fs.mkdirSync(userFolder, { recursive: true });
-
-    const updateData = { profile_pic: null, id_front: null, id_back: null };
-
-    // Función helper para procesar imagen
-    async function processImage(file, currentKey) {
-      // Eliminar anterior
-      const oldUrl = userResult.rows[0][currentKey];
-      if (oldUrl) {
-        const oldPath = path.join(__dirname, 'public', oldUrl);
-        if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
-      }
-
-      const tempPath = file.path;
-      const original = file.originalname;
-      const ext = path.extname(original).toLowerCase();
-      let finalName;
-
-      if (ext === '.heic' || ext === '.heif') {
-        finalName = original.replace(/\.(heic|heif)$/i, '.jpg');
-        const convertedPath = path.join(userFolder, finalName);
-        try {
-          const inputBuffer = await fs.promises.readFile(tempPath);
-          const outputBuffer = await heicConvert({
-            buffer: inputBuffer,
-            format: 'JPEG',
-            quality: 1
-          });
-          await fs.promises.writeFile(convertedPath, outputBuffer);
-          fs.unlinkSync(tempPath);
-        } catch (err) {
-          console.error('❌ Error conversión HEIC:', err);
-          finalName = original;
-          fs.renameSync(tempPath, path.join(userFolder, finalName));
-        }
-      } else {
-        finalName = original;
-        fs.renameSync(tempPath, path.join(userFolder, finalName));
-      }
-
-      return `/uploads/usuarios/${userUuid}/${finalName}`;
-    }
-
-    // Procesar archivos si existen
-    if (req.files.profilePic) {
-      updateData.profile_pic = await processImage(req.files.profilePic[0], 'profile_pic');
-    }
-    if (req.files.idFront) {
-      updateData.id_front = await processImage(req.files.idFront[0], 'id_front');
-    }
-    if (req.files.idBack) {
-      updateData.id_back = await processImage(req.files.idBack[0], 'id_back');
-    }
-
-    // Construir actualización SQL
-    const fields = [username, email, phone, address, city, dept];
-    const queryParts = [
-      'username = $1',
-      'email = $2',
-      'phone = $3',
-      'address = $4',
-      'city = $5',
-      'dept = $6'
-    ];
-    let idx = 7;
-
-    if (updateData.profile_pic) {
-      fields.push(updateData.profile_pic);
-      queryParts.push(`profile_pic = $${idx++}`);
-    }
-    if (updateData.id_front) {
-      fields.push(updateData.id_front);
-      queryParts.push(`id_front = $${idx++}`);
-    }
-    if (updateData.id_back) {
-      fields.push(updateData.id_back);
-      queryParts.push(`id_back = $${idx++}`);
-    }
-
-    fields.push(belongs, agencyId);
-    queryParts.push(`belongs_to_agency = $${idx++}`, `agency_id = $${idx++}`);
-
-    fields.push(userId);
-    const sql = `UPDATE users SET ${queryParts.join(', ')} WHERE id = $${idx}`;
-
-    await pool.query(sql, fields);
-
-    // Actualizar sesión
-    const updated = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
-    req.session.user = updated.rows[0];
-
-    res.redirect('/dashboard');
-  } catch (err) {
-    console.error('Error al actualizar perfil:', err);
-    res.status(500).send('Error al actualizar el perfil.');
-  }
-});
 
 
 app.get('/check-username', async (req, res) => {
@@ -1881,9 +1746,6 @@ app.get('/dashboard/profile', isAuthenticated, async (req, res) => {
 });
 
 
-// Endpoint para actualizar perfil de usuario
-
-// Ruta actualizada:
 app.post(
   '/dashboard/profile',
   isAuthenticated,
@@ -1894,6 +1756,10 @@ app.post(
   ]),
   async (req, res) => {
     try {
+      console.log('🔥 PETICIÓN /dashboard/profile recibida');
+      console.log('FILES:', req.files);
+      console.log('BODY:',  req.body);
+
       const userId = req.session.user.id;
       const {
         username,
@@ -1906,10 +1772,11 @@ app.post(
         agency
       } = req.body;
 
+      // Asociación a inmobiliaria
       const belongs = belongsToAgency === 'true';
       const agencyId = belongs ? agency : null;
 
-      // Obtener UUID y URLs actuales desde BD
+      // Obtener datos actuales del usuario
       const userResult = await pool.query(
         'SELECT uuid, profile_pic, id_front, id_back FROM users WHERE id = $1',
         [userId]
@@ -1924,9 +1791,10 @@ app.post(
         id_back: currentBackUrl
       } = userResult.rows[0];
 
+      // Preparamos objeto para nuevos URLs
       const updateData = { profile_pic: null, id_front: null, id_back: null };
 
-      // 1) Procesar nueva foto de perfil si viene
+      // Procesar profilePic si viene
       if (req.files.profilePic && req.files.profilePic.length > 0) {
         // Eliminar anterior en Spaces si existía
         if (currentPicUrl) {
@@ -1937,14 +1805,17 @@ app.post(
           }
         }
         const file = req.files.profilePic[0];
-        // file.buffer contiene los datos en memoria
+        // Subir buffer a Spaces
         const newUrl = await processAndUploadToSpacesBuffer(
-          file.buffer, file.originalname, userUuid, 'profilePic'
+          file.buffer,
+          file.originalname,
+          userUuid,
+          'profilePic'
         );
         updateData.profile_pic = newUrl;
       }
 
-      // 2) Procesar idFront si viene
+      // Procesar idFront si viene
       if (req.files.idFront && req.files.idFront.length > 0) {
         if (currentFrontUrl) {
           try {
@@ -1955,12 +1826,15 @@ app.post(
         }
         const file = req.files.idFront[0];
         const newUrl = await processAndUploadToSpacesBuffer(
-          file.buffer, file.originalname, userUuid, 'idFront'
+          file.buffer,
+          file.originalname,
+          userUuid,
+          'idFront'
         );
         updateData.id_front = newUrl;
       }
 
-      // 3) Procesar idBack si viene
+      // Procesar idBack si viene
       if (req.files.idBack && req.files.idBack.length > 0) {
         if (currentBackUrl) {
           try {
@@ -1971,12 +1845,15 @@ app.post(
         }
         const file = req.files.idBack[0];
         const newUrl = await processAndUploadToSpacesBuffer(
-          file.buffer, file.originalname, userUuid, 'idBack'
+          file.buffer,
+          file.originalname,
+          userUuid,
+          'idBack'
         );
         updateData.id_back = newUrl;
       }
 
-      // 4) Construir consulta UPDATE dinámicamente
+      // Construir actualización SQL dinámicamente
       const fields = [username, email, phone, address, city, dept];
       const queryParts = [
         'username = $1',
@@ -1986,35 +1863,34 @@ app.post(
         'city = $5',
         'dept = $6'
       ];
-      let paramIndex = 7;
+      let idx = 7;
 
       if (updateData.profile_pic) {
         fields.push(updateData.profile_pic);
-        queryParts.push(`profile_pic = $${paramIndex++}`);
+        queryParts.push(`profile_pic = $${idx++}`);
       }
       if (updateData.id_front) {
         fields.push(updateData.id_front);
-        queryParts.push(`id_front = $${paramIndex++}`);
+        queryParts.push(`id_front = $${idx++}`);
       }
       if (updateData.id_back) {
         fields.push(updateData.id_back);
-        queryParts.push(`id_back = $${paramIndex++}`);
+        queryParts.push(`id_back = $${idx++}`);
       }
 
-      // Asociación a inmobiliaria
+      // Asociación a agencia
       fields.push(belongs, agencyId);
-      queryParts.push(`belongs_to_agency = $${paramIndex++}`);
-      queryParts.push(`agency_id = $${paramIndex++}`);
+      queryParts.push(`belongs_to_agency = $${idx++}`, `agency_id = $${idx++}`);
 
       // WHERE id
       fields.push(userId);
-      const updateQuery = `UPDATE users SET ${queryParts.join(', ')} WHERE id = $${paramIndex}`;
+      const sql = `UPDATE users SET ${queryParts.join(', ')} WHERE id = $${idx}`;
 
-      await pool.query(updateQuery, fields);
+      await pool.query(sql, fields);
 
-      // 5) Refrescar sesión
-      const updatedRes = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
-      req.session.user = updatedRes.rows[0];
+      // Refrescar sesión con los nuevos datos
+      const updated = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
+      req.session.user = updated.rows[0];
 
       res.redirect('/dashboard');
     } catch (err) {
@@ -2023,8 +1899,6 @@ app.post(
     }
   }
 );
-
-
 
 
 
@@ -2239,33 +2113,81 @@ const propertyUpload = multer({ storage: propertyStorage });
 
 
 // --- 2) Antes de la ruta, inyectamos el UUID en la request ---
+// Antes de la ruta, inyectamos un folder UUID para esta petición:
 app.use('/properties/new', (req, _res, next) => {
   req.uploadFolderUuid = uuidv4();
   next();
 });
 
-// --- 3) POST /properties/new usando ONLY propertyUpload ---
-// POST /properties/new — Crear nueva propiedad (solo para propiedades)
-// POST /properties/new — Crear nueva propiedad (solo para propiedades)
-// POST /properties/new — Crear nueva propiedad (solo para propiedades)
-// Agrega al inicio de tu server.js si aún no existe:
-// POST /properties/new — Crear nueva propiedad con soporte HEIC en imágenes
-// Agrega al inicio de tu server.js si aún no existe:
-// POST /properties/new — Crear nueva propiedad con soporte HEIC en imágenes
+// Helper para generar la key en Spaces:
+function makeS3Key(prefixFolder, filename) {
+  const timestamp = Date.now();
+  const baseName = path.basename(filename).replace(/\s+/g, '_');
+  return `${prefixFolder}/${timestamp}-${baseName}`;
+}
+
+// Helper que toma un buffer y lo sube a Spaces, devolviendo la URL pública:
+async function uploadBufferToSpaces(buffer, originalName, prefixFolder) {
+  // Detectar extensión original:
+  const ext = path.extname(originalName).toLowerCase();
+  let finalBuffer = buffer;
+  let finalExt = ext;
+
+  // Si es HEIC/HEIF, convertir en memoria a JPEG
+  if (ext === '.heic' || ext === '.heif') {
+    try {
+      const outputBuffer = await heicConvert({
+        buffer: buffer,
+        format: 'JPEG',
+        quality: 1
+      });
+      finalBuffer = outputBuffer;
+      finalExt = '.jpg';
+    } catch (convErr) {
+      console.error('Error convirtiendo HEIC a JPEG:', convErr);
+      // en caso de fallo, seguimos con el buffer original y ext original
+    }
+  }
+
+  // Definir nombre base para key. Puedes mejorar si quieres:
+  const key = makeS3Key(prefixFolder, path.basename(originalName, ext) + finalExt);
+
+  // Subir a Spaces
+  try {
+    await s3v2.putObject({
+      Bucket: process.env.SPACES_BUCKET,
+      Key: key,
+      Body: finalBuffer,
+      ACL: 'public-read',
+      ContentType: finalExt === '.jpg' || finalExt === '.jpeg' 
+        ? 'image/jpeg' 
+        : (finalExt === '.png' ? 'image/png' : 'application/octet-stream')
+    }).promise();
+  } catch (s3Err) {
+    console.error('Error subiendo a Spaces:', s3Err);
+    throw new Error('Error al subir imagen a Spaces');
+  }
+
+  // Construir URL pública (formato típico de DigitalOcean Spaces)
+  const url = `https://${process.env.SPACES_BUCKET}.${process.env.SPACES_ENDPOINT}/${key}`;
+  return url;
+}
+
+// Ruta POST /properties/new
 app.post(
   '/properties/new',
   isAuthenticated,
-  propertyUpload.fields([
+  uploadMemory.fields([
     { name: 'imagenes', maxCount: 10 },
-    { name: 'video',    maxCount: 1  },
-    { name: 'plano',    maxCount: 1  }
+    { name: 'video',    maxCount: 1 },
+    { name: 'plano',    maxCount: 1 }
   ]),
   async (req, res) => {
     try {
-      const uuid   = req.uploadFolderUuid;
+      const folderUuid = req.uploadFolderUuid;
       const userId = req.session.user.id;
 
-      // Campos del body
+      // Campos de formulario
       const {
         titulo, tipo_propiedad, departamento, municipio, zona,
         operacion, precio, habitaciones, banos, descripcion,
@@ -2291,57 +2213,77 @@ app.post(
         : req.body.caracteristicas_local ? [req.body.caracteristicas_local] : [];
 
       // Validar precio
-      const precioNumeric = parseFloat(precio.toString().trim().replace(/^Q\s*/i, '').replace(/,/g, ''));
-      if (isNaN(precioNumeric)) throw new Error('Precio inválido');
-
-      // 5a) Orden y archivos subidos
-      let imagenFiles = req.files['imagenes'] || [];
-      const order = req.body.imageOrder;
-      if (order) {
-        const ordered = Array.isArray(order) ? order : [order];
-        imagenFiles = ordered
-          .map(name => imagenFiles.find(f => f.filename === name))
-          .filter(f => f);
+      const precioNumeric = parseFloat(
+        precio
+          .toString()
+          .trim()
+          .replace(/^Q\s*/i, '')
+          .replace(/,/g, '')
+      );
+      if (isNaN(precioNumeric)) {
+        return res.status(400).send('Precio inválido');
       }
 
-      // 5b) Convertir HEIC/HEIF a JPEG en servidor
+      // Procesar imágenes
+      const imagenFiles = req.files['imagenes'] || [];
+      const imagenes_urls = [];
+      // Subir cada imagen en memoria a Spaces
       for (const file of imagenFiles) {
-        const ext = path.extname(file.filename).toLowerCase();
-        if (ext === '.heic' || ext === '.heif') {
-          const tempPath = file.path;
-          const newName  = file.filename.replace(/\.(heic|heif)$/i, '.jpg');
-          const newPath  = path.join(path.dirname(tempPath), newName);
-          try {
-            const inputBuffer  = await fs.promises.readFile(tempPath);
-            const outputBuffer = await heicConvert({
-              buffer: inputBuffer,
-              format: 'JPEG',
-              quality: 1
-            });
-            await fs.promises.writeFile(newPath, outputBuffer);
-            await fs.promises.unlink(tempPath);
-            file.filename = newName;
-            file.path     = newPath;
-          } catch (err) {
-            console.error('Error converting HEIC image:', err);
-          }
+        // file.buffer está disponible gracias a uploadMemory
+        const prefix = `propiedades/${folderUuid}`;
+        try {
+          const url = await uploadBufferToSpaces(file.buffer, file.originalname, prefix);
+          imagenes_urls.push(url);
+        } catch (errUpload) {
+          console.error('Error subiendo imagen en propiedades:', errUpload);
+          // puedes optar por abortar todo o continuar sin esta imagen. Aquí continuamos con las que suban.
         }
       }
 
-      // 5c) Construir URLs de imágenes
-      const imagenes_urls = imagenFiles.map(f =>
-        `/uploads/propiedades/${uuid}/${f.filename}`
-      );
+      // Procesar video (si es imagen o buffer): 
+      // Supongo que el campo "video" es un archivo de video. Si quieres subirlo también en memoria:
+      let video_url = null;
+      if (req.files['video'] && req.files['video'][0]) {
+        const file = req.files['video'][0];
+        // subimos en memoria. Nota: si videos son grandes >8MB, este middleware falla; en tal caso necesitarías otro enfoque.
+        try {
+          const prefix = `propiedades/${folderUuid}`;
+          // Simplemente subimos sin conversión:
+          const keyVid = makeS3Key(prefix, file.originalname);
+          await s3v2.putObject({
+            Bucket: process.env.SPACES_BUCKET,
+            Key: keyVid,
+            Body: file.buffer,
+            ACL: 'public-read',
+            ContentType: file.mimetype || 'application/octet-stream'
+          }).promise();
+          video_url = `https://${process.env.SPACES_BUCKET}.${process.env.SPACES_ENDPOINT}/${keyVid}`;
+        } catch (errVid) {
+          console.error('Error subiendo video:', errVid);
+        }
+      }
 
-      // 6) Procesar video y plano
-      const video_url = req.files['video']
-        ? `/uploads/propiedades/${uuid}/${req.files['video'][0].filename}`
-        : null;
-      const plano_url = req.files['plano']
-        ? `/uploads/propiedades/${uuid}/${req.files['plano'][0].filename}`
-        : null;
+      // Procesar plano (similar a video)
+      let plano_url = null;
+      if (req.files['plano'] && req.files['plano'][0]) {
+        const file = req.files['plano'][0];
+        try {
+          const prefix = `propiedades/${folderUuid}`;
+          const keyPlano = makeS3Key(prefix, file.originalname);
+          await s3v2.putObject({
+            Bucket: process.env.SPACES_BUCKET,
+            Key: keyPlano,
+            Body: file.buffer,
+            ACL: 'public-read',
+            ContentType: file.mimetype || 'application/octet-stream'
+          }).promise();
+          plano_url = `https://${process.env.SPACES_BUCKET}.${process.env.SPACES_ENDPOINT}/${keyPlano}`;
+        } catch (errPlano) {
+          console.error('Error subiendo plano:', errPlano);
+        }
+      }
 
-      // 7) Insertar en la base de datos y obtener el nuevo ID
+      // Insertar en BD
       const insertRes = await pool.query(
         `INSERT INTO propiedades (
            titulo, tipo_propiedad, departamento, municipio, zona,
@@ -2365,13 +2307,13 @@ app.post(
         [
           titulo, tipo_propiedad, departamento, municipio, zona,
           operacion, precioNumeric,
-          habitaciones ? parseInt(habitaciones,10) : null,
-          banos        ? parseInt(banos,10)       : null,
+          habitaciones ? parseInt(habitaciones, 10) : null,
+          banos ? parseInt(banos, 10) : null,
           descripcion,
-          m2_construccion ? parseInt(m2_construccion,10) : null,
-          m2_terreno     ? parseInt(m2_terreno,10)     : null,
-          tamano_terreno ? parseInt(tamano_terreno,10) : null,
-          metros_frente  ? parseInt(metros_frente,10)  : null,
+          m2_construccion ? parseInt(m2_construccion, 10) : null,
+          m2_terreno ? parseInt(m2_terreno, 10) : null,
+          tamano_terreno ? parseInt(tamano_terreno, 10) : null,
+          metros_frente ? parseInt(metros_frente, 10) : null,
           JSON.stringify(imagenes_urls),
           video_url,
           plano_url,
@@ -2383,20 +2325,20 @@ app.post(
           req.body.bodega_tamano ? parseFloat(req.body.bodega_tamano) : null,
           req.body.bodega_altura ? parseFloat(req.body.bodega_altura) : null,
           req.body.cantidad_oficinas
-            ? parseInt(req.body.cantidad_oficinas,10)
+            ? parseInt(req.body.cantidad_oficinas, 10)
             : null,
           req.body.cantidad_banos
-            ? parseInt(req.body.cantidad_banos,10)
+            ? parseInt(req.body.cantidad_banos, 10)
             : null,
           JSON.stringify(caracteristicas_bodega),
           req.body.local_tamano ? parseFloat(req.body.local_tamano) : null,
           JSON.stringify(caracteristicas_local),
-          uuid
+          folderUuid
         ]
       );
       const newId = insertRes.rows[0].id;
 
-      // 8) Generar slug
+      // Generar slug
       const rawSlug = titulo
         .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
         .trim().toLowerCase()
@@ -2405,7 +2347,7 @@ app.post(
       const finalSlug = `${rawSlug}-${newId}`;
       await pool.query('UPDATE propiedades SET slug = $1 WHERE id = $2', [finalSlug, newId]);
 
-      // Notificar admins y redirigir
+      // Notificar admins si quieres...
       const adminsRes = await pool.query(
         `SELECT email FROM users WHERE rol = 'admin' AND email IS NOT NULL`
       );
@@ -2415,14 +2357,14 @@ app.post(
           from: "Inmo360 <no-reply@inmo360.com>",
           to: adminEmails,
           subject: 'Nueva propiedad pendiente de revisión',
-          text: `El usuario ${req.session.user.username} ha subido una nueva propiedad titulada "${titulo}".`
+          text: `El usuario ${req.session.user.username} ha subido "${titulo}".`
         });
       }
 
-      res.redirect('/properties?submitted=true');
+      return res.redirect('/properties?submitted=true');
     } catch (err) {
       console.error('Error al crear propiedad:', err);
-      res.status(500).send('Error al crear la propiedad.');
+      return res.status(500).send('Error al crear la propiedad.');
     }
   }
 );
@@ -2430,88 +2372,6 @@ app.post(
 // Nota: tus otras rutas siguen usando el `upload` original, por ejemplo:
 // upload.single('profilePic'), upload.fields([...]) para usuarios, agencias, etc.
 
-
-
-
-// Formulario para editar una propiedad
-app.get('/properties/edit/:id', isAuthenticated, async (req, res) => {
-  const id = req.params.id;
-  try {
-    const result = await pool.query('SELECT * FROM propiedades WHERE id = $1', [id]);
-    if (result.rows.length === 0) {
-      return res.send('Propiedad no encontrada');
-    }
-    const property = result.rows[0];
-    const { departamentos } = locationsData;
-    res.render('propertyForm', { property, departamentos, action: `/properties/edit/${id}` });
-  } catch (err) {
-    console.error(err);
-    res.send('Error al cargar la propiedad.');
-  }
-});
-
-// Manejar la actualización de una propiedad
-app.post('/properties/edit/:id', isAuthenticated, upload.single('imagen'), async (req, res) => {
-  const id = req.params.id;
-  const {
-    titulo, departamento, municipio, zona, tipo_propiedad, operacion,
-    precio, habitaciones, banos, descripcion,
-    bodega_tamano, bodega_altura, cantidad_oficinas, cantidad_banos,
-    local_tamano
-  } = req.body;
-
-  let imagen_url = null;
-  if (req.file) {
-    imagen_url = `/uploads/${req.file.filename}`;
-  }
-
-  let caracteristicas_bodega = req.body['caracteristicas_bodega[]'] || [];
-  let caracteristicas_local = req.body['caracteristicas_local[]'] || [];
-
-  if (!Array.isArray(caracteristicas_bodega)) caracteristicas_bodega = [caracteristicas_bodega];
-  if (!Array.isArray(caracteristicas_local)) caracteristicas_local = [caracteristicas_local];
-
-  const rawPrecio = precio.toString().trim().replace(/^Q\s*/i, '').replace(/,/g, '');
-  const precioNumeric = parseFloat(rawPrecio);
-
-  try {
-    const query = `UPDATE propiedades SET
-      titulo=$1, departamento=$2, municipio=$3, zona=$4, tipo_propiedad=$5,
-      operacion=$6, precio=$7, habitaciones=$8, banos=$9, descripcion=$10,
-      imagen_url=${imagen_url ? '$11,' : ''}
-      bodega_tamano=$${imagen_url ? 12 : 11},
-      bodega_altura=$${imagen_url ? 13 : 12},
-      cantidad_oficinas=$${imagen_url ? 14 : 13},
-      cantidad_banos=$${imagen_url ? 15 : 14},
-      caracteristicas_bodega=$${imagen_url ? 16 : 15},
-      local_tamano=$${imagen_url ? 17 : 16},
-      caracteristicas_local=$${imagen_url ? 18 : 17}
-      WHERE id=$${imagen_url ? 19 : 18}`;
-
-    const values = [
-      titulo, departamento, municipio, zona, tipo_propiedad,
-      operacion, precioNumeric, parseInt(habitaciones), parseInt(banos), descripcion
-    ];
-
-    if (imagen_url) values.push(imagen_url);
-    values.push(
-      bodega_tamano || null,
-      bodega_altura || null,
-      cantidad_oficinas ? parseInt(cantidad_oficinas) : null,
-      cantidad_banos ? parseInt(cantidad_banos) : null,
-      JSON.stringify(caracteristicas_bodega),
-      local_tamano || null,
-      JSON.stringify(caracteristicas_local),
-      id
-    );
-
-    await pool.query(query, values);
-    res.redirect('/properties');
-  } catch (err) {
-    console.error(err);
-    res.send('Error al actualizar la propiedad.');
-  }
-});
 
 // Eliminar propiedad
 
