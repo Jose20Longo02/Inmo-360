@@ -606,9 +606,6 @@ background: linear-gradient(
     .results-container {
       flex-direction: column;
     }
-    .header-container {
-      flex-direction: column;
-    }
     .property-item {
       flex-direction: column;
       align-items: center;
