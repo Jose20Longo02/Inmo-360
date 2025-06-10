@@ -14,6 +14,7 @@ const locationsData = require('./locations');
 const sharp = require('sharp');
 const heicConvert = require('heic-convert');
 const { departamentos } = locationsData;
+const compression = require('compression');
 const fs = require('fs-extra'); // <- Asegúrate de instalarlo: npm install fs-extra
 
 const app = express();
@@ -29,7 +30,7 @@ const transporter = nodemailer.createTransport({
 });
 
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
-
+app.use(compression());
 
 // Configuración de EJS
 app.set('view engine', 'ejs');
