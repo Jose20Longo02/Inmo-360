@@ -61,9 +61,6 @@ app.use((req, res, next) => {
 // =========================
 
 // uploadMemory.js
-const multer = require('multer');
-const path = require('path');
-
 function fileFilter(req, file, cb) {
   if (file.mimetype.startsWith('image/')) cb(null, true);
   else cb(new Error('Formato no soportado: solo imágenes'), false);
