@@ -1,6 +1,5 @@
 // server.js
 const express = require('express');
-const uploadS3    = require('./uploadS3');
 const AWS = require('aws-sdk');
 const multerS3 = require('multer-s3');
 const path = require('path');
