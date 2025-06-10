@@ -552,7 +552,7 @@ app.post('/admin/properties/:id/aprobar', requireAdmin, async (req, res) => {
         from: `"Inmo360" <no-reply@tu-dominio.com>`,
         to: userEmail,
         subject: 'Tu propiedad ha sido aprobada',
-        text: `¡Buen trabajo! Tu propiedad “${prop.titulo}” ya está activa en la plataforma.\n\nPuedes verla aquí: https://tu-dominio.com/properties/${id}`
+        text: `¡Buen trabajo! Tu propiedad “${prop.titulo}” ya está activa en la plataforma.\n\nSaludos cordiales,\nEquipo Inmo360.`
       });
     }
 
@@ -621,7 +621,7 @@ app.post('/admin/properties/:id/rechazar', requireAdmin, async (req, res) => {
         from: `"Inmo360" <no-reply@tu-dominio.com>`,
         to: userEmail,
         subject: 'Tu propiedad ha sido rechazada',
-        text: `Lo sentimos, tu propiedad “${prop.titulo}” fue rechazada por el siguiente motivo:\n\n${motivo}\n\nPor favor vuelve a llenar el formulario de publicación aquí: https://tu-dominio.com/properties/new`
+        text: `Lo sentimos, tu propiedad “${prop.titulo}” fue rechazada por el siguiente motivo:\n\n${motivo}\n\nIntenta publicar la propiedad otra vez y evita cometer el mismo error.\n\nSaludos cordiales,\nEquipo Inmo360.`
       });
     }
 
