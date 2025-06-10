@@ -1,5 +1,7 @@
 // server.js
 const express = require('express');
+const uploadMemory = require('./uploadMemory');
+const uploadS3    = require('./uploadS3');
 const AWS = require('aws-sdk');
 const multerS3 = require('multer-s3');
 const path = require('path');
@@ -58,32 +60,48 @@ app.use((req, res, next) => {
 // CONFIGURACIÓN MULTER PARA DIGITALOCEAN SPACES
 // =========================
 
-// Configurar cliente v2
+// uploadMemory.js
+const multer = require('multer');
+const path = require('path');
+
+function fileFilter(req, file, cb) {
+  if (file.mimetype.startsWith('image/')) cb(null, true);
+  else cb(new Error('Formato no soportado: solo imágenes'), false);
+}
+const limits = { fileSize: 8 * 1024 * 1024 }; // 8 MB
+
+const uploadMemory = multer({
+  storage: multer.memoryStorage(),
+  fileFilter,
+  limits,
+});
+
+module.exports = uploadMemory;
+
+
+
+// Configurar cliente S3 v2 para DigitalOcean Spaces
 const spacesEndpoint = new AWS.Endpoint(process.env.SPACES_ENDPOINT);
-const s3 = new AWS.S3({
+const s3v2 = new AWS.S3({
   endpoint: spacesEndpoint,
   accessKeyId: process.env.SPACES_KEY,
   secretAccessKey: process.env.SPACES_SECRET,
 });
 
-// Helper para la key
 function makeS3Key(prefixFolder, originalName) {
   const timestamp = Date.now();
   const baseName = path.basename(originalName).replace(/\s+/g, '_');
   return `${prefixFolder}/${timestamp}-${baseName}`;
 }
 
-// fileFilter y limits según tus necesidades...
 function fileFilter(req, file, cb) {
   if (file.mimetype.startsWith('image/')) cb(null, true);
   else cb(new Error('Formato no soportado: solo imágenes'), false);
 }
-const limits = { fileSize: 8 * 1024 * 1024 };
 
-// Configuración multer-s3
-const upload = multer({
+const uploadS3 = multer({
   storage: multerS3({
-    s3,
+    s3: s3v2,
     bucket: process.env.SPACES_BUCKET,
     acl: 'public-read',
     contentType: multerS3.AUTO_CONTENT_TYPE,
@@ -105,7 +123,73 @@ const upload = multer({
   limits,
 });
 
-module.exports = upload;
+module.exports = uploadS3;
+
+
+
+
+
+async function processAndUploadToSpacesBuffer(buffer, originalName, userUuid, fieldName) {
+  const ext = path.extname(originalName).toLowerCase();
+  let finalBuffer = buffer;
+  let finalExt = ext;
+  // convertir HEIC a JPEG si aplica
+  if (ext === '.heic' || ext === '.heif') {
+    try {
+      const outputBuffer = await heicConvert({
+        buffer,
+        format: 'JPEG',
+        quality: 1
+      });
+      finalBuffer = outputBuffer;
+      finalExt = '.jpg';
+    } catch (err) {
+      console.error('Error conversión HEIC:', err);
+      // fallback mantiene buffer original/ext original
+    }
+  }
+  // decidir nombre en Spaces
+  const timestamp = Date.now();
+  let filenameBase;
+  if (fieldName === 'profilePic') filenameBase = `profile-${timestamp}`;
+  else if (fieldName === 'idFront') filenameBase = `idFront-${timestamp}`;
+  else if (fieldName === 'idBack')  filenameBase = `idBack-${timestamp}`;
+  else filenameBase = `${timestamp}`;
+  const key = `usuarios/${userUuid}/${filenameBase}${finalExt}`;
+  // subir a Spaces
+  try {
+    await s3.putObject({
+      Bucket: process.env.SPACES_BUCKET,
+      Key: key,
+      Body: finalBuffer,
+      ACL: 'public-read',
+      ContentType: `image/${finalExt.replace(/^\./,'')}`
+    }).promise();
+  } catch (err) {
+    console.error('Error subiendo a Spaces:', err);
+    throw err;
+  }
+  // URL pública
+  return `https://${process.env.SPACES_BUCKET}.${process.env.SPACES_ENDPOINT}/${key}`;
+}
+
+async function deleteFromSpacesByUrl(url) {
+  try {
+    const prefix = `https://${process.env.SPACES_BUCKET}.${process.env.SPACES_ENDPOINT}/`;
+    if (!url.startsWith(prefix)) {
+      console.warn('URL no pertenece a este Space:', url);
+      return;
+    }
+    const key = url.substring(prefix.length);
+    await s3.deleteObject({
+      Bucket: process.env.SPACES_BUCKET,
+      Key: key
+    }).promise();
+  } catch (err) {
+    console.error('Error borrando en Spaces:', err);
+  }
+}
+
 
 
 
@@ -1390,12 +1474,12 @@ app.get('/register', async (req, res) => {
 });
 
 // POST /register — crear usuario y login automático, con primer usuario como admin y conversión HEIC
-// POST /register — crear usuario, login automático, primer usuario como admin y envío de email de bienvenido
-app.post('/register',
-  upload.fields([
+app.post(
+  '/register',
+  uploadMemory.fields([
     { name: 'profilePic', maxCount: 1 },
-    { name: 'idFront',     maxCount: 1 },
-    { name: 'idBack',      maxCount: 1 }
+    { name: 'idFront',    maxCount: 1 },
+    { name: 'idBack',     maxCount: 1 }
   ]),
   async (req, res) => {
     try {
@@ -1426,82 +1510,31 @@ app.post('/register',
       const totalUsers = parseInt(countRes.rows[0].cnt, 10);
       const role = totalUsers === 0 ? 'admin' : 'user';
 
-      // 4) Función helper para convertir y subir a Spaces
-      //    Devuelve la URL pública en Spaces o null si no hay archivo.
-      async function processAndUploadToSpaces(file, field) {
-        if (!file || !file.buffer) return null;
-        const originalName = file.originalname;
-        const ext = path.extname(originalName).toLowerCase();
-        let inputBuffer = file.buffer;
-        let finalBuffer = inputBuffer;
-        let finalExt = ext;
-        // 4a) Si es HEIC/HEIF, convertimos a JPEG en memoria
-        if (ext === '.heic' || ext === '.heif') {
-          try {
-            const outputBuffer = await heicConvert({
-              buffer: inputBuffer,
-              format: 'JPEG',
-              quality: 1
-            });
-            finalBuffer = outputBuffer;
-            finalExt = '.jpg';
-          } catch (convErr) {
-            console.error('Error conversión HEIC en registro:', convErr);
-            // Si falla, mantenemos el buffer original y ext original (aunque muchos navegadores no muestran HEIC directamente)
-            finalBuffer = inputBuffer;
-            finalExt = ext;
-          }
-        }
-        // 4b) Generar key único en Spaces:
-        //    Estructura: usuarios/<userUuid>/<field>-<timestamp><ext>
-        const timestamp = Date.now();
-        let filenameBase;
-        if (field === 'profilePic') filenameBase = `profile-${timestamp}`;
-        else if (field === 'idFront') filenameBase = `idFront-${timestamp}`;
-        else if (field === 'idBack') filenameBase = `idBack-${timestamp}`;
-        else filenameBase = `${timestamp}`;
-        // Aseguramos que la extensión final coincida
-        const key = `usuarios/${userUuid}/${filenameBase}${finalExt}`;
-
-        // 4c) Subir a Spaces
-        try {
-          await s3.putObject({
-            Bucket: process.env.SPACES_BUCKET,
-            Key: key,
-            Body: finalBuffer,
-            ACL: 'public-read',
-            ContentType: file.mimetype.startsWith('image/') 
-              ? `image/${finalExt.replace(/^\./,'')}` 
-              : file.mimetype
-          }).promise();
-        } catch (s3Err) {
-          console.error('Error subiendo a Spaces:', s3Err);
-          throw new Error('No se pudo subir imagen');
-        }
-
-        // 4d) Construir URL pública
-        //   En DigitalOcean Spaces la URL suele ser:
-        //   https://<bucket>.<endpoint>/<key>
-        const url = `https://${process.env.SPACES_BUCKET}.${process.env.SPACES_ENDPOINT}/${key}`;
-        return url;
-      }
-
-      // 5) Procesar archivos subidos en memoria y subir a Spaces
+      // 4) Procesar archivos subidos en memoria y subir a Spaces
       let profilePicUrl = null, idFrontUrl = null, idBackUrl = null;
       if (req.files.profilePic && req.files.profilePic.length > 0) {
-        profilePicUrl = await processAndUploadToSpaces(req.files.profilePic[0], 'profilePic');
+        const file = req.files.profilePic[0];
+        profilePicUrl = await processAndUploadToSpacesBuffer(
+          file.buffer, file.originalname, userUuid, 'profilePic'
+        );
       }
       if (req.files.idFront && req.files.idFront.length > 0) {
-        idFrontUrl = await processAndUploadToSpaces(req.files.idFront[0], 'idFront');
+        const file = req.files.idFront[0];
+        idFrontUrl = await processAndUploadToSpacesBuffer(
+          file.buffer, file.originalname, userUuid, 'idFront'
+        );
       }
       if (req.files.idBack && req.files.idBack.length > 0) {
-        idBackUrl = await processAndUploadToSpaces(req.files.idBack[0], 'idBack');
+        const file = req.files.idBack[0];
+        idBackUrl = await processAndUploadToSpacesBuffer(
+          file.buffer, file.originalname, userUuid, 'idBack'
+        );
       }
 
-      // 6) Encriptar contraseña
+      // 5) Encriptar contraseña
       const hashed = await bcrypt.hash(password, saltRounds);
 
-      // 7) Insertar usuario en BD
+      // 6) Insertar usuario en BD
       const insertRes = await pool.query(
         `INSERT INTO users
           (username, email, password,
@@ -1523,26 +1556,24 @@ app.post('/register',
         ]
       );
 
-      // 8) Enviar email de bienvenida (no detiene el flujo si falla)
+      // 7) Enviar email de bienvenida (no detiene el flujo si falla)
       try {
         await transporter.sendMail({
           from: `"Inmo360" <no-reply@inmo360.com>`,
           to: email,
           subject: 'Bienvenido a Inmo360!',
           text: `Hola ${username},\n\n¡Bienvenido a Inmo360! Nos alegra que te hayas registrado. Comienza a explorar y publicar propiedades.\n\nSaludos,\nEl equipo de Inmo360`
-          // Si prefieres HTML:
-          // html: `<p>Hola ${username},</p><p>¡Bienvenido a <strong>Inmo360</strong>! ...</p>`
         });
       } catch (mailErr) {
         console.error('Error enviando email de bienvenida:', mailErr);
       }
 
-      // 9) Login automático
+      // 8) Login automático
       const newUser = insertRes.rows[0];
       delete newUser.password;
       req.session.user = newUser;
 
-      // 10) Redirigir según flag
+      // 9) Redirigir según flag
       if (redirectToAgency === 'true') {
         return res.redirect('/agencias/registro');
       }
@@ -1550,8 +1581,6 @@ app.post('/register',
 
     } catch (err) {
       console.error('Error en POST /register:', err);
-      // Si hubo un error S3 o conversión, tal vez quieras limpiar algún objeto subido parcialmente.
-      // Podrías implementar borrado de objetos subidos si falla antes de insertar en BD.
       res.status(500).send('Error al crear la cuenta.');
     }
   }
@@ -1871,10 +1900,10 @@ app.get('/dashboard/profile', isAuthenticated, async (req, res) => {
 app.post(
   '/dashboard/profile',
   isAuthenticated,
-  upload.fields([
+  uploadMemory.fields([
     { name: 'profilePic', maxCount: 1 },
-    { name: 'idFront', maxCount: 1 },
-    { name: 'idBack', maxCount: 1 }
+    { name: 'idFront',    maxCount: 1 },
+    { name: 'idBack',     maxCount: 1 }
   ]),
   async (req, res) => {
     try {
@@ -1914,10 +1943,14 @@ app.post(
       if (req.files.profilePic && req.files.profilePic.length > 0) {
         // Eliminar anterior en Spaces si existía
         if (currentPicUrl) {
-          await deleteFromSpacesByUrl(currentPicUrl);
+          try {
+            await deleteFromSpacesByUrl(currentPicUrl);
+          } catch (e) {
+            console.error('Error borrando anterior profilePic en Spaces:', e);
+          }
         }
         const file = req.files.profilePic[0];
-        // file.buffer contiene el buffer en memoria
+        // file.buffer contiene los datos en memoria
         const newUrl = await processAndUploadToSpacesBuffer(
           file.buffer, file.originalname, userUuid, 'profilePic'
         );
@@ -1927,7 +1960,11 @@ app.post(
       // 2) Procesar idFront si viene
       if (req.files.idFront && req.files.idFront.length > 0) {
         if (currentFrontUrl) {
-          await deleteFromSpacesByUrl(currentFrontUrl);
+          try {
+            await deleteFromSpacesByUrl(currentFrontUrl);
+          } catch (e) {
+            console.error('Error borrando anterior idFront en Spaces:', e);
+          }
         }
         const file = req.files.idFront[0];
         const newUrl = await processAndUploadToSpacesBuffer(
@@ -1939,7 +1976,11 @@ app.post(
       // 3) Procesar idBack si viene
       if (req.files.idBack && req.files.idBack.length > 0) {
         if (currentBackUrl) {
-          await deleteFromSpacesByUrl(currentBackUrl);
+          try {
+            await deleteFromSpacesByUrl(currentBackUrl);
+          } catch (e) {
+            console.error('Error borrando anterior idBack en Spaces:', e);
+          }
         }
         const file = req.files.idBack[0];
         const newUrl = await processAndUploadToSpacesBuffer(
@@ -1978,6 +2019,7 @@ app.post(
       queryParts.push(`belongs_to_agency = $${paramIndex++}`);
       queryParts.push(`agency_id = $${paramIndex++}`);
 
+      // WHERE id
       fields.push(userId);
       const updateQuery = `UPDATE users SET ${queryParts.join(', ')} WHERE id = $${paramIndex}`;
 
