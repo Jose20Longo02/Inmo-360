@@ -1364,6 +1364,134 @@ app.get('/register', async (req, res) => {
   }
 });
 
+// POST /register — crear usuario y login automático, con primer usuario como admin y conversión HEIC
+app.post('/register',
+  upload.fields([
+    { name: 'profilePic', maxCount: 1 },
+    { name: 'idFront',     maxCount: 1 },
+    { name: 'idBack',      maxCount: 1 }
+  ]),
+  async (req, res) => {
+    try {
+      const userUuid = uuidv4();
+      const {
+        username, email, password,
+        dept, city, address, phone,
+        belongsToAgency, agency,
+        redirectToAgency
+      } = req.body;
+
+      // Validar obligatorios
+      if (!username || !email || !password || !dept || !city || !address || !phone) {
+        return res.status(400).send("Todos los campos obligatorios deben estar llenos.");
+      }
+
+      // Verificar duplicados
+      const dup = await pool.query(
+        "SELECT 1 FROM users WHERE username=$1 OR email=$2",
+        [username, email]
+      );
+      if (dup.rows.length) {
+        return res.status(400).send("El nombre de usuario o correo ya están registrados.");
+      }
+
+      // Determinar rol: si no hay usuarios aún, este será el primero → admin
+      const countRes = await pool.query("SELECT COUNT(*) AS cnt FROM users");
+      const totalUsers = parseInt(countRes.rows[0].cnt, 10);
+      const role = totalUsers === 0 ? 'admin' : 'user';
+
+      // Carpeta de usuario
+      const userFolder = path.join(__dirname, 'public', 'uploads', 'usuarios', userUuid);
+      if (!fs.existsSync(userFolder)) fs.mkdirSync(userFolder, { recursive: true });
+
+      // Helper para procesar imagen y convertir HEIC/HEIF a JPG si aplica
+      async function processImage(file) {
+        const tempPath = file.path;
+        const originalName = file.originalname;
+        const ext = path.extname(originalName).toLowerCase();
+        let finalName;
+        if (ext === '.heic' || ext === '.heif') {
+          // Generar nombre final con extensión .jpg
+          finalName = originalName.replace(/\.(heic|heif)$/i, '.jpg');
+          const outPath = path.join(userFolder, finalName);
+          try {
+            const inputBuffer = await fs.promises.readFile(tempPath);
+            const outputBuffer = await heicConvert({
+              buffer: inputBuffer,
+              format: 'JPEG',
+              quality: 1
+            });
+            await fs.promises.writeFile(outPath, outputBuffer);
+            // Eliminar archivo temporal
+            await fs.promises.unlink(tempPath);
+          } catch (err) {
+            console.error('Error conversión HEIC en registro:', err);
+            // Si falla la conversión, movemos el original sin convertir
+            finalName = originalName;
+            fs.renameSync(tempPath, path.join(userFolder, finalName));
+          }
+        } else {
+          // Otros formatos: mover directamente
+          finalName = originalName;
+          fs.renameSync(tempPath, path.join(userFolder, finalName));
+        }
+        return `/uploads/usuarios/${userUuid}/${finalName}`;
+      }
+
+      // Procesar archivos subidos
+      let profilePic = null, idFront = null, idBack = null;
+      if (req.files.profilePic) {
+        profilePic = await processImage(req.files.profilePic[0]);
+      }
+      if (req.files.idFront) {
+        idFront = await processImage(req.files.idFront[0]);
+      }
+      if (req.files.idBack) {
+        idBack = await processImage(req.files.idBack[0]);
+      }
+
+      // Encriptar contraseña
+      const hashed = await bcrypt.hash(password, saltRounds);
+
+      // Insertar usuario con rol dinámico
+      const insertRes = await pool.query(
+        `INSERT INTO users
+          (username, email, password,
+           profile_pic, dept, city, address, phone,
+           id_front, id_back,
+           belongs_to_agency, agency_id,
+           uuid, rol)
+         VALUES
+          ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+         RETURNING *`,
+        [
+          username, email, hashed,
+          profilePic, dept, city, address, phone,
+          idFront, idBack,
+          (belongsToAgency === 'si'),
+          (belongsToAgency === 'si' ? agency : null),
+          userUuid,
+          role
+        ]
+      );
+
+      // Login automático
+      const newUser = insertRes.rows[0];
+      delete newUser.password;
+      req.session.user = newUser;
+
+      // Redirigir según flag
+      if (redirectToAgency === 'true') {
+        return res.redirect('/agencias/registro');
+      }
+      res.redirect('/dashboard');
+    } catch (err) {
+      console.error('Error en POST /register:', err);
+      res.status(500).send('Error al crear la cuenta.');
+    }
+  }
+);
+
 
 // POST /register — crear usuario y, si viene el flag, redirigir a registrar agencia
 // Registro de usuarios — login automático tras crear cuenta
