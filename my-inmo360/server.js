@@ -55,9 +55,20 @@ app.use((req, res, next) => {
 });
 
 // =========================
-// CONFIGURACIÓN MULTER
+// CONFIGURACIÓN MULTER PARA DIGITALOCEAN SPACES
 // =========================
-// Configurar cliente S3 apuntando a DigitalOcean Spaces
+
+const AWS = require('aws-sdk');
+const multer = require('multer');
+const multerS3 = require('multer-s3');
+const path = require('path');
+
+// 1) Configurar cliente S3 v2 apuntando a DigitalOcean Spaces
+//    PROCESS ENV debe tener:
+//      SPACES_ENDPOINT (ej. 'nyc3.digitaloceanspaces.com' u otro endpoint que te provea DO)
+//      SPACES_KEY
+//      SPACES_SECRET
+//      SPACES_BUCKET
 const spacesEndpoint = new AWS.Endpoint(process.env.SPACES_ENDPOINT);
 const s3 = new AWS.S3({
   endpoint: spacesEndpoint,
@@ -65,15 +76,15 @@ const s3 = new AWS.S3({
   secretAccessKey: process.env.SPACES_SECRET,
 });
 
-// Helper para generar la clave (key) en el bucket
+// 2) Helper para generar la clave (key) dentro del bucket
 function makeS3Key(prefixFolder, originalName) {
   const timestamp = Date.now();
-  // Reemplaza espacios por '_' y elimina caracteres inválidos si quieres
+  // Sanitiza el nombre reemplazando espacios y caracteres indeseados
   const baseName = path.basename(originalName).replace(/\s+/g, '_');
   return `${prefixFolder}/${timestamp}-${baseName}`;
 }
 
-// File filter: aceptar solo imágenes (incluyendo HEIC/HEIF si el navegador envía mimetype image/heic)
+// 3) File filter: solo imágenes (incluyendo HEIC/HEIF si el navegador envía mimetype image/heic)
 function fileFilter(req, file, cb) {
   if (file.mimetype.startsWith('image/')) {
     cb(null, true);
@@ -82,12 +93,14 @@ function fileFilter(req, file, cb) {
   }
 }
 
-// Límites opcionales
+// 4) Límites opcionales
 const limits = {
   fileSize: 8 * 1024 * 1024, // 8 MB por archivo
 };
 
-// Middleware upload con multer-s3
+// 5) Middleware upload con multer-s3 (AWS SDK v2)
+//    No se debe mezclar con AWS SDK v3 ni con Upload de @aws-sdk/lib-storage.
+//    Esto usa multer-s3 que internamente llama a putObject de AWS SDK v2.
 const upload = multer({
   storage: multerS3({
     s3,
@@ -102,6 +115,7 @@ const upload = multer({
       }
       // Si estás en perfil de usuario (sesión activa y guardas UUID en sesión):
       else if (req.session && req.session.user) {
+        // Asegúrate de que `session.user.uuid` exista o genera uno cuando creas usuario
         const userUuid = req.session.user.uuid || `user-${req.session.user.id}`;
         prefix = `usuarios/${userUuid}`;
       }
@@ -116,10 +130,12 @@ const upload = multer({
   limits,
 });
 
-// Exporta o usa `upload` en tus rutas, por ejemplo:
-// app.post('/register', upload.fields([{ name: 'profilePic', maxCount: 1 }, ...]), async (req, res) => { ... });
-// app.post('/dashboard/profile', upload.fields([...]), ...);
-// app.post('/properties/new', upload.fields([{ name: 'imagenes', maxCount: 10 }, ...]), ...);
+// 6) Exporta o usa `upload` en tus rutas:
+//    Ejemplo:
+//    const upload = require('./ruta/a/este/archivo');
+//    app.post('/register', upload.fields([{ name: 'profilePic', maxCount: 1 }, ...]), async (req, res) => { ... });
+//    app.post('/dashboard/profile', upload.fields([...]), ...);
+//    app.post('/properties/new', upload.fields([{ name: 'imagenes', maxCount: 10 }, ...]), ...);
 
 module.exports = upload;
 
