@@ -26,7 +26,7 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 
 // Configuración de EJS
