@@ -1,5 +1,7 @@
 // server.js
 const express = require('express');
+const AWS = require('aws-sdk');
+const multerS3 = require('multer-s3');
 const path = require('path');
 const session = require('express-session');
 const bodyParser = require('body-parser');
@@ -55,10 +57,6 @@ app.use((req, res, next) => {
 // =========================
 // CONFIGURACIÓN MULTER
 // =========================
-const AWS = require('aws-sdk');
-const multer = require('multer');
-const multerS3 = require('multer-s3');
-const path = require('path');
 
 // Configurar cliente S3 apuntando a DigitalOcean Spaces
 const spacesEndpoint = new AWS.Endpoint(process.env.SPACES_ENDPOINT);
