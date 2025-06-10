@@ -529,11 +529,30 @@ app.post('/admin/agencies/:id/rechazar', isAuthenticated, async (req, res) => {
       return res.status(404).send('Inmobiliaria no encontrada');
     }
 
-    // 2) Borrar archivo de logo si existe
+    // 2) Borrar archivo de logo en Spaces si existe
     if (agency.logo_url) {
-      const logoPath = path.join(__dirname, 'public', agency.logo_url);
-      if (fs.existsSync(logoPath)) {
-        fs.unlinkSync(logoPath);
+      // Helper inline para extraer el key de Spaces desde la URL pública
+      const extractKeyFromUrl = (url) => {
+        if (!url) return null;
+        const prefix = `https://${process.env.SPACES_BUCKET}.${process.env.SPACES_ENDPOINT}/`;
+        if (url.startsWith(prefix)) {
+          return url.substring(prefix.length);
+        }
+        // Si la URL no coincide con el patrón esperado, no borramos
+        console.warn('URL de logo no pertenece a este Space, se omite borrado:', url);
+        return null;
+      };
+
+      const key = extractKeyFromUrl(agency.logo_url);
+      if (key) {
+        try {
+          await s3v2.deleteObject({
+            Bucket: process.env.SPACES_BUCKET,
+            Key: key
+          }).promise();
+        } catch (delErr) {
+          console.error('Error borrando logo en Spaces:', key, delErr);
+        }
       }
     }
 
@@ -695,9 +714,9 @@ app.post('/admin/properties/:id/rechazar', requireAdmin, async (req, res) => {
   const { id } = req.params;
   const { motivo } = req.body;
   try {
-    // 1) Recuperar datos de la propiedad
+    // 1) Recuperar datos de la propiedad, incluyendo URLs multimedia y folder_uuid
     const propRes = await pool.query(
-      `SELECT user_id, titulo, folder_uuid
+      `SELECT user_id, titulo, folder_uuid, imagenes_urls, video_url, plano_url
          FROM propiedades
         WHERE id = $1`,
       [id]
@@ -707,21 +726,110 @@ app.post('/admin/properties/:id/rechazar', requireAdmin, async (req, res) => {
       return res.status(404).send('Propiedad no encontrada');
     }
 
-    // 2) Eliminar fila de la base de datos
+    // 2) Borrar archivos en Spaces si existen
+    // Helper para extraer key de Spaces desde URL pública
+    const extractKeyFromUrl = (url) => {
+      if (!url) return null;
+      const prefix = `https://${process.env.SPACES_BUCKET}.${process.env.SPACES_ENDPOINT}/`;
+      if (url.startsWith(prefix)) {
+        return url.substring(prefix.length);
+      }
+      console.warn('URL no pertenece a este Space, se omite borrado:', url);
+      return null;
+    };
+
+    // a) Borrar imágenes
+    if (prop.imagenes_urls) {
+      let images = [];
+      if (typeof prop.imagenes_urls === 'string') {
+        try {
+          images = JSON.parse(prop.imagenes_urls);
+        } catch (e) {
+          console.warn('JSON inválido en imagenes_urls:', prop.imagenes_urls);
+        }
+      } else if (Array.isArray(prop.imagenes_urls)) {
+        images = prop.imagenes_urls;
+      }
+      for (const url of images) {
+        const key = extractKeyFromUrl(url);
+        if (key) {
+          try {
+            await s3v2.deleteObject({
+              Bucket: process.env.SPACES_BUCKET,
+              Key: key
+            }).promise();
+          } catch (e) {
+            console.error('Error borrando imagen en Spaces:', key, e);
+          }
+        }
+      }
+    }
+
+    // b) Borrar video
+    if (prop.video_url) {
+      const keyVid = extractKeyFromUrl(prop.video_url);
+      if (keyVid) {
+        try {
+          await s3v2.deleteObject({
+            Bucket: process.env.SPACES_BUCKET,
+            Key: keyVid
+          }).promise();
+        } catch (e) {
+          console.error('Error borrando video en Spaces:', keyVid, e);
+        }
+      }
+    }
+
+    // c) Borrar plano
+    if (prop.plano_url) {
+      const keyPlano = extractKeyFromUrl(prop.plano_url);
+      if (keyPlano) {
+        try {
+          await s3v2.deleteObject({
+            Bucket: process.env.SPACES_BUCKET,
+            Key: keyPlano
+          }).promise();
+        } catch (e) {
+          console.error('Error borrando plano en Spaces:', keyPlano, e);
+        }
+      }
+    }
+
+    // d) (Opcional) Borrar cualquier otro archivo bajo el prefijo folder_uuid
+    if (prop.folder_uuid) {
+      const prefix = `propiedades/${prop.folder_uuid}/`;
+      // Lista todos los objetos bajo este prefijo y los borra en lote
+      try {
+        let ContinuationToken = null;
+        do {
+          const listParams = {
+            Bucket: process.env.SPACES_BUCKET,
+            Prefix: prefix,
+            ContinuationToken
+          };
+          const listed = await s3v2.listObjectsV2(listParams).promise();
+          if (listed.Contents && listed.Contents.length > 0) {
+            const deleteParams = {
+              Bucket: process.env.SPACES_BUCKET,
+              Delete: {
+                Objects: listed.Contents.map(obj => ({ Key: obj.Key }))
+              }
+            };
+            await s3v2.deleteObjects(deleteParams).promise();
+          }
+          ContinuationToken = listed.IsTruncated ? listed.NextContinuationToken : null;
+        } while (ContinuationToken);
+      } catch (e) {
+        console.error('Error borrando prefijo completo en Spaces:', prefix, e);
+      }
+    }
+
+    // 3) Eliminar fila de la base de datos
     await pool.query(
       `DELETE FROM propiedades
         WHERE id = $1`,
       [id]
     );
-
-    // 3) Eliminar archivos de la propiedad
-    if (prop.folder_uuid) {
-      const folderPath = path.join(__dirname, 'public', 'uploads', 'propiedades', prop.folder_uuid);
-      if (fs.existsSync(folderPath)) {
-        fs.rmSync(folderPath, { recursive: true, force: true });
-        console.log(`Carpeta eliminada: ${folderPath}`);
-      }
-    }
 
     // 4) Crear notificación interna
     await pool.query(
