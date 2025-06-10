@@ -58,12 +58,7 @@ app.use((req, res, next) => {
 // CONFIGURACIÓN MULTER PARA DIGITALOCEAN SPACES
 // =========================
 
-// 1) Configurar cliente S3 v2 apuntando a DigitalOcean Spaces
-//    PROCESS ENV debe tener:
-//      SPACES_ENDPOINT (ej. 'nyc3.digitaloceanspaces.com' u otro endpoint que te provea DO)
-//      SPACES_KEY
-//      SPACES_SECRET
-//      SPACES_BUCKET
+// Configurar cliente v2
 const spacesEndpoint = new AWS.Endpoint(process.env.SPACES_ENDPOINT);
 const s3 = new AWS.S3({
   endpoint: spacesEndpoint,
@@ -71,50 +66,35 @@ const s3 = new AWS.S3({
   secretAccessKey: process.env.SPACES_SECRET,
 });
 
-// 2) Helper para generar la clave (key) dentro del bucket
+// Helper para la key
 function makeS3Key(prefixFolder, originalName) {
   const timestamp = Date.now();
-  // Sanitiza el nombre reemplazando espacios y caracteres indeseados
   const baseName = path.basename(originalName).replace(/\s+/g, '_');
   return `${prefixFolder}/${timestamp}-${baseName}`;
 }
 
-// 3) File filter: solo imágenes (incluyendo HEIC/HEIF si el navegador envía mimetype image/heic)
+// fileFilter y limits según tus necesidades...
 function fileFilter(req, file, cb) {
-  if (file.mimetype.startsWith('image/')) {
-    cb(null, true);
-  } else {
-    cb(new Error('Formato no soportado: solo imágenes'), false);
-  }
+  if (file.mimetype.startsWith('image/')) cb(null, true);
+  else cb(new Error('Formato no soportado: solo imágenes'), false);
 }
+const limits = { fileSize: 8 * 1024 * 1024 };
 
-// 4) Límites opcionales
-const limits = {
-  fileSize: 8 * 1024 * 1024, // 8 MB por archivo
-};
-
-// 5) Middleware upload con multer-s3 (AWS SDK v2)
-//    No se debe mezclar con AWS SDK v3 ni con Upload de @aws-sdk/lib-storage.
-//    Esto usa multer-s3 que internamente llama a putObject de AWS SDK v2.
+// Configuración multer-s3
 const upload = multer({
   storage: multerS3({
     s3,
     bucket: process.env.SPACES_BUCKET,
     acl: 'public-read',
     contentType: multerS3.AUTO_CONTENT_TYPE,
-    key: function (req, file, cb) {
+    key: (req, file, cb) => {
       let prefix;
-      // Ejemplo: si definiste req.uploadFolderUuid en rutas de propiedades:
       if (req.uploadFolderUuid) {
         prefix = `propiedades/${req.uploadFolderUuid}`;
-      }
-      // Si estás en perfil de usuario (sesión activa y guardas UUID en sesión):
-      else if (req.session && req.session.user) {
-        // Asegúrate de que `session.user.uuid` exista o genera uno cuando creas usuario
+      } else if (req.session && req.session.user) {
         const userUuid = req.session.user.uuid || `user-${req.session.user.id}`;
         prefix = `usuarios/${userUuid}`;
-      }
-      else {
+      } else {
         prefix = `temp`;
       }
       const key = makeS3Key(prefix, file.originalname);
@@ -124,13 +104,6 @@ const upload = multer({
   fileFilter,
   limits,
 });
-
-// 6) Exporta o usa `upload` en tus rutas:
-//    Ejemplo:
-//    const upload = require('./ruta/a/este/archivo');
-//    app.post('/register', upload.fields([{ name: 'profilePic', maxCount: 1 }, ...]), async (req, res) => { ... });
-//    app.post('/dashboard/profile', upload.fields([...]), ...);
-//    app.post('/properties/new', upload.fields([{ name: 'imagenes', maxCount: 10 }, ...]), ...);
 
 module.exports = upload;
 
