@@ -55,17 +55,32 @@ app.use((req, res, next) => {
 // =========================
 // CONFIGURACIÓN MULTER
 // =========================
-const storage = multer.diskStorage({
-  destination(req, file, cb) {
-    cb(null, '/tmp'); // o la carpeta que uses antes de mover a uploads finales
-  },
-  filename(req, file, cb) {
-    const ext = path.extname(file.originalname);
-    cb(null, `${Date.now()}${ext}`);
-  }
+const AWS = require('aws-sdk');
+const multer = require('multer');
+const multerS3 = require('multer-s3');
+const path = require('path');
+
+// Configurar cliente S3 apuntando a DigitalOcean Spaces
+const spacesEndpoint = new AWS.Endpoint(process.env.SPACES_ENDPOINT);
+// Opcionalmente puedes añadir region si tu Space lo requiere, aunque generalmente no es estrictamente necesario:
+// const s3 = new AWS.S3({ endpoint: spacesEndpoint, region: 'us-east-1', ... });
+const s3 = new AWS.S3({
+  endpoint: spacesEndpoint,
+  accessKeyId: process.env.SPACES_KEY,
+  secretAccessKey: process.env.SPACES_SECRET,
 });
 
-// 2) File filter: permite cualquier mimetype que empiece por image/
+// Helper para generar la clave (key) en el bucket. 
+// Puedes ajustar la carpeta según tu lógica. Por ejemplo, para usuarios: `usuarios/${userUuid}/...`
+// o para propiedades: `propiedades/${folderUuid}/...`. Aquí se muestra un ejemplo genérico.
+function makeS3Key(prefixFolder, originalName) {
+  // Sanitiza el nombre si quieres. Ej: elimina espacios, caracteres raros, etc.
+  const timestamp = Date.now();
+  const baseName = path.basename(originalName).replace(/\s+/g, '_');
+  return `${prefixFolder}/${timestamp}-${baseName}`;
+}
+
+// File filter: aceptar solo imágenes (incluyendo HEIC/HEIF si el navegador envía mimetype image/heic o similar).
 function fileFilter(req, file, cb) {
   if (file.mimetype.startsWith('image/')) {
     cb(null, true);
@@ -74,17 +89,49 @@ function fileFilter(req, file, cb) {
   }
 }
 
-// 3) Opcional: límites de tamaño
+// Límites opcionales
 const limits = {
-  fileSize: 8 * 1024 * 1024  // 8 MB por archivo
+  fileSize: 8 * 1024 * 1024, // 8 MB por archivo
 };
 
-// 4) Inicializar Multer
+// Ejemplo de configuración de multer-S3 para uploads genéricos.
+// Dependiendo de la ruta, puedes cambiar el prefijoFolder con req.uploadFolderUuid o con el ID de usuario.
 const upload = multer({
-  storage,
+  storage: multerS3({
+    s3,
+    bucket: process.env.SPACES_BUCKET,
+    acl: 'public-read',
+    contentType: multerS3.AUTO_CONTENT_TYPE,
+    key: function (req, file, cb) {
+      // Aquí decides la carpeta en el bucket. Por ejemplo:
+      // Si estás en /register o /dashboard/profile, puedes usar un UUID generado:
+      //   const userUuid = req.uploadFolderUuid || req.session.user.uuid;
+      // Para propiedades, usas req.uploadFolderUuid en la ruta /properties/new.
+      // A modo de ejemplo, detectamos si req.uploadFolderUuid existe:
+      let prefix;
+      if (req.uploadFolderUuid) {
+        // en rutas de propiedades
+        prefix = `propiedades/${req.uploadFolderUuid}`;
+      } else if (req.session && req.session.user && req.session.user.id) {
+        // en rutas de usuario (por ejemplo profile), puedes usar el ID o un UUID en sesión
+        // Si guardas el UUID en la sesión (req.session.user.uuid), úsalo:
+        const userUuid = req.session.user.uuid || `user-${req.session.user.id}`;
+        prefix = `usuarios/${userUuid}`;
+      } else {
+        // fallback temporal
+        prefix = `temp`;
+      }
+      const key = makeS3Key(prefix, file.originalname);
+      cb(null, key);
+    }
+  }),
   fileFilter,
-  limits
+  limits,
 });
+
+
+
+
 
 
 app.get('/owners', (req, res) => {
@@ -1365,9 +1412,9 @@ app.get('/register', async (req, res) => {
 });
 
 // POST /register — crear usuario y login automático, con primer usuario como admin y conversión HEIC
-// POST /register — crear usuario, login automático, primer usuario como admin y envío de email de bienvenida
+// POST /register — crear usuario, login automático, primer usuario como admin y envío de email de bienvenido
 app.post('/register',
-  upload.fields([
+  uploadMemory.fields([
     { name: 'profilePic', maxCount: 1 },
     { name: 'idFront',     maxCount: 1 },
     { name: 'idBack',      maxCount: 1 }
@@ -1382,12 +1429,12 @@ app.post('/register',
         redirectToAgency
       } = req.body;
 
-      // Validar obligatorios
+      // 1) Validar campos obligatorios
       if (!username || !email || !password || !dept || !city || !address || !phone) {
         return res.status(400).send("Todos los campos obligatorios deben estar llenos.");
       }
 
-      // Verificar duplicados
+      // 2) Verificar duplicados
       const dup = await pool.query(
         "SELECT 1 FROM users WHERE username=$1 OR email=$2",
         [username, email]
@@ -1396,65 +1443,87 @@ app.post('/register',
         return res.status(400).send("El nombre de usuario o correo ya están registrados.");
       }
 
-      // Determinar rol: si no hay usuarios aún, este será el primero → admin
+      // 3) Determinar rol (primer usuario → admin)
       const countRes = await pool.query("SELECT COUNT(*) AS cnt FROM users");
       const totalUsers = parseInt(countRes.rows[0].cnt, 10);
       const role = totalUsers === 0 ? 'admin' : 'user';
 
-      // Carpeta de usuario
-      const userFolder = path.join(__dirname, 'public', 'uploads', 'usuarios', userUuid);
-      if (!fs.existsSync(userFolder)) fs.mkdirSync(userFolder, { recursive: true });
-
-      // Helper para procesar imagen y convertir HEIC/HEIF a JPG si aplica
-      async function processImage(file) {
-        const tempPath = file.path;
+      // 4) Función helper para convertir y subir a Spaces
+      //    Devuelve la URL pública en Spaces o null si no hay archivo.
+      async function processAndUploadToSpaces(file, field) {
+        if (!file || !file.buffer) return null;
         const originalName = file.originalname;
         const ext = path.extname(originalName).toLowerCase();
-        let finalName;
+        let inputBuffer = file.buffer;
+        let finalBuffer = inputBuffer;
+        let finalExt = ext;
+        // 4a) Si es HEIC/HEIF, convertimos a JPEG en memoria
         if (ext === '.heic' || ext === '.heif') {
-          // Generar nombre final con extensión .jpg
-          finalName = originalName.replace(/\.(heic|heif)$/i, '.jpg');
-          const outPath = path.join(userFolder, finalName);
           try {
-            const inputBuffer = await fs.promises.readFile(tempPath);
             const outputBuffer = await heicConvert({
               buffer: inputBuffer,
               format: 'JPEG',
               quality: 1
             });
-            await fs.promises.writeFile(outPath, outputBuffer);
-            // Eliminar archivo temporal
-            await fs.promises.unlink(tempPath);
-          } catch (err) {
-            console.error('Error conversión HEIC en registro:', err);
-            // Si falla la conversión, movemos el original sin convertir
-            finalName = originalName;
-            fs.renameSync(tempPath, path.join(userFolder, finalName));
+            finalBuffer = outputBuffer;
+            finalExt = '.jpg';
+          } catch (convErr) {
+            console.error('Error conversión HEIC en registro:', convErr);
+            // Si falla, mantenemos el buffer original y ext original (aunque muchos navegadores no muestran HEIC directamente)
+            finalBuffer = inputBuffer;
+            finalExt = ext;
           }
-        } else {
-          // Otros formatos: mover directamente
-          finalName = originalName;
-          fs.renameSync(tempPath, path.join(userFolder, finalName));
         }
-        return `/uploads/usuarios/${userUuid}/${finalName}`;
+        // 4b) Generar key único en Spaces:
+        //    Estructura: usuarios/<userUuid>/<field>-<timestamp><ext>
+        const timestamp = Date.now();
+        let filenameBase;
+        if (field === 'profilePic') filenameBase = `profile-${timestamp}`;
+        else if (field === 'idFront') filenameBase = `idFront-${timestamp}`;
+        else if (field === 'idBack') filenameBase = `idBack-${timestamp}`;
+        else filenameBase = `${timestamp}`;
+        // Aseguramos que la extensión final coincida
+        const key = `usuarios/${userUuid}/${filenameBase}${finalExt}`;
+
+        // 4c) Subir a Spaces
+        try {
+          await s3.putObject({
+            Bucket: process.env.SPACES_BUCKET,
+            Key: key,
+            Body: finalBuffer,
+            ACL: 'public-read',
+            ContentType: file.mimetype.startsWith('image/') 
+              ? `image/${finalExt.replace(/^\./,'')}` 
+              : file.mimetype
+          }).promise();
+        } catch (s3Err) {
+          console.error('Error subiendo a Spaces:', s3Err);
+          throw new Error('No se pudo subir imagen');
+        }
+
+        // 4d) Construir URL pública
+        //   En DigitalOcean Spaces la URL suele ser:
+        //   https://<bucket>.<endpoint>/<key>
+        const url = `https://${process.env.SPACES_BUCKET}.${process.env.SPACES_ENDPOINT}/${key}`;
+        return url;
       }
 
-      // Procesar archivos subidos
-      let profilePic = null, idFront = null, idBack = null;
-      if (req.files.profilePic) {
-        profilePic = await processImage(req.files.profilePic[0]);
+      // 5) Procesar archivos subidos en memoria y subir a Spaces
+      let profilePicUrl = null, idFrontUrl = null, idBackUrl = null;
+      if (req.files.profilePic && req.files.profilePic.length > 0) {
+        profilePicUrl = await processAndUploadToSpaces(req.files.profilePic[0], 'profilePic');
       }
-      if (req.files.idFront) {
-        idFront = await processImage(req.files.idFront[0]);
+      if (req.files.idFront && req.files.idFront.length > 0) {
+        idFrontUrl = await processAndUploadToSpaces(req.files.idFront[0], 'idFront');
       }
-      if (req.files.idBack) {
-        idBack = await processImage(req.files.idBack[0]);
+      if (req.files.idBack && req.files.idBack.length > 0) {
+        idBackUrl = await processAndUploadToSpaces(req.files.idBack[0], 'idBack');
       }
 
-      // Encriptar contraseña
+      // 6) Encriptar contraseña
       const hashed = await bcrypt.hash(password, saltRounds);
 
-      // Insertar usuario con rol dinámico
+      // 7) Insertar usuario en BD
       const insertRes = await pool.query(
         `INSERT INTO users
           (username, email, password,
@@ -1467,8 +1536,8 @@ app.post('/register',
          RETURNING *`,
         [
           username, email, hashed,
-          profilePic, dept, city, address, phone,
-          idFront, idBack,
+          profilePicUrl, dept, city, address, phone,
+          idFrontUrl, idBackUrl,
           (belongsToAgency === 'si'),
           (belongsToAgency === 'si' ? agency : null),
           userUuid,
@@ -1476,33 +1545,35 @@ app.post('/register',
         ]
       );
 
-      // Enviar email de bienvenida
+      // 8) Enviar email de bienvenida (no detiene el flujo si falla)
       try {
         await transporter.sendMail({
           from: `"Inmo360" <no-reply@inmo360.com>`,
           to: email,
           subject: 'Bienvenido a Inmo360!',
-          // Puedes usar text o html
-          text: `Hola ${username},\n\n¡Bienvenido a Inmo360! Nos alegra que te hayas registrado. Comienza a explorar y publicar propiedades.\n\nSaludos,\nEl equipo de Inmo360`,
-          // html: `<p>Hola ${username},</p><p>¡Bienvenido a <strong>Inmo360</strong>! Nos alegra que te hayas registrado. Comienza a explorar y publicar propiedades.</p><p>Saludos,<br/>El equipo de Inmo360</p>`
+          text: `Hola ${username},\n\n¡Bienvenido a Inmo360! Nos alegra que te hayas registrado. Comienza a explorar y publicar propiedades.\n\nSaludos,\nEl equipo de Inmo360`
+          // Si prefieres HTML:
+          // html: `<p>Hola ${username},</p><p>¡Bienvenido a <strong>Inmo360</strong>! ...</p>`
         });
       } catch (mailErr) {
         console.error('Error enviando email de bienvenida:', mailErr);
-        // No interrumpir el flujo de registro si falla el email
       }
 
-      // Login automático
+      // 9) Login automático
       const newUser = insertRes.rows[0];
       delete newUser.password;
       req.session.user = newUser;
 
-      // Redirigir según flag
+      // 10) Redirigir según flag
       if (redirectToAgency === 'true') {
         return res.redirect('/agencias/registro');
       }
       res.redirect('/dashboard');
+
     } catch (err) {
       console.error('Error en POST /register:', err);
+      // Si hubo un error S3 o conversión, tal vez quieras limpiar algún objeto subido parcialmente.
+      // Podrías implementar borrado de objetos subidos si falla antes de insertar en BD.
       res.status(500).send('Error al crear la cuenta.');
     }
   }
@@ -1818,154 +1889,133 @@ app.get('/dashboard/profile', isAuthenticated, async (req, res) => {
 
 // Endpoint para actualizar perfil de usuario
 
-app.post('/dashboard/profile', isAuthenticated, upload.fields([
-  { name: 'profilePic', maxCount: 1 },
-  { name: 'idFront', maxCount: 1 },
-  { name: 'idBack', maxCount: 1 }
-]), async (req, res) => {
-  try {
-    const userId = req.session.user.id;
-    const {
-      username,
-      email,
-      phone,
-      address,
-      city,
-      dept,
-      belongsToAgency,
-      agency
-    } = req.body;
+// Ruta actualizada:
+app.post(
+  '/dashboard/profile',
+  isAuthenticated,
+  uploadMemory.fields([
+    { name: 'profilePic', maxCount: 1 },
+    { name: 'idFront', maxCount: 1 },
+    { name: 'idBack', maxCount: 1 }
+  ]),
+  async (req, res) => {
+    try {
+      const userId = req.session.user.id;
+      const {
+        username,
+        email,
+        phone,
+        address,
+        city,
+        dept,
+        belongsToAgency,
+        agency
+      } = req.body;
 
-    // Determinar asociación a inmobiliaria
-    const belongs = belongsToAgency === 'true';
-    const agencyId = belongs ? agency : null;
+      const belongs = belongsToAgency === 'true';
+      const agencyId = belongs ? agency : null;
 
-    // Obtener UUID y fotos actuales
-    const userResult = await pool.query(
-      'SELECT uuid, profile_pic, id_front, id_back FROM users WHERE id = $1',
-      [userId]
-    );
-    if (userResult.rows.length === 0) return res.status(404).send('Usuario no encontrado.');
-
-    const { uuid: userUuid, profile_pic: currentPic, id_front: currentFront, id_back: currentBack } = userResult.rows[0];
-    const userFolder = path.join(__dirname, 'public', 'uploads', 'usuarios', userUuid);
-    if (!fs.existsSync(userFolder)) fs.mkdirSync(userFolder, { recursive: true });
-
-    const updateData = { profile_pic: null, id_front: null, id_back: null };
-
-    // Procesar nueva foto de perfil y convertir HEIC/HEIF a JPEG si es necesario
-    if (req.files['profilePic']) {
-      // Eliminar foto anterior
-      if (currentPic) {
-        const oldPath = path.join(__dirname, 'public', currentPic);
-        if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+      // Obtener UUID y URLs actuales desde BD
+      const userResult = await pool.query(
+        'SELECT uuid, profile_pic, id_front, id_back FROM users WHERE id = $1',
+        [userId]
+      );
+      if (userResult.rows.length === 0) {
+        return res.status(404).send('Usuario no encontrado.');
       }
+      const {
+        uuid: userUuid,
+        profile_pic: currentPicUrl,
+        id_front: currentFrontUrl,
+        id_back: currentBackUrl
+      } = userResult.rows[0];
 
-      const file = req.files['profilePic'][0];
-      const tempPath = file.path;
-      const ext = path.extname(file.originalname).toLowerCase();
-      let finalFilename;
+      const updateData = { profile_pic: null, id_front: null, id_back: null };
 
-      if (ext === '.heic' || ext === '.heif') {
-        finalFilename = file.originalname.replace(/\.(heic|heif)$/i, '.jpg');
-        const convertedPath = path.join(userFolder, finalFilename);
-        try {
-          // Conversión HEIC a JPEG con heic-convert
-          const inputBuffer = await fs.promises.readFile(tempPath);
-          const outputBuffer = await heicConvert({
-            buffer: inputBuffer,
-            format: 'JPEG',
-            quality: 1
-          });
-          await fs.promises.writeFile(convertedPath, outputBuffer);
-          fs.unlinkSync(tempPath);
-        } catch (err) {
-          console.error('Error converting HEIC with heic-convert:', err);
-          // Si falla conversión, mover original
-          finalFilename = file.originalname;
-          fs.renameSync(tempPath, path.join(userFolder, finalFilename));
+      // 1) Procesar nueva foto de perfil si viene
+      if (req.files.profilePic && req.files.profilePic.length > 0) {
+        // Eliminar anterior en Spaces si existía
+        if (currentPicUrl) {
+          await deleteFromSpacesByUrl(currentPicUrl);
         }
-      } else {
-        // Para otros formatos se renombra directamente
-        finalFilename = file.originalname;
-        const newPath = path.join(userFolder, finalFilename);
-        fs.renameSync(tempPath, newPath);
+        const file = req.files.profilePic[0];
+        // file.buffer contiene el buffer en memoria
+        const newUrl = await processAndUploadToSpacesBuffer(
+          file.buffer, file.originalname, userUuid, 'profilePic'
+        );
+        updateData.profile_pic = newUrl;
       }
 
-      updateData.profile_pic = `/uploads/usuarios/${userUuid}/${finalFilename}`;
+      // 2) Procesar idFront si viene
+      if (req.files.idFront && req.files.idFront.length > 0) {
+        if (currentFrontUrl) {
+          await deleteFromSpacesByUrl(currentFrontUrl);
+        }
+        const file = req.files.idFront[0];
+        const newUrl = await processAndUploadToSpacesBuffer(
+          file.buffer, file.originalname, userUuid, 'idFront'
+        );
+        updateData.id_front = newUrl;
+      }
+
+      // 3) Procesar idBack si viene
+      if (req.files.idBack && req.files.idBack.length > 0) {
+        if (currentBackUrl) {
+          await deleteFromSpacesByUrl(currentBackUrl);
+        }
+        const file = req.files.idBack[0];
+        const newUrl = await processAndUploadToSpacesBuffer(
+          file.buffer, file.originalname, userUuid, 'idBack'
+        );
+        updateData.id_back = newUrl;
+      }
+
+      // 4) Construir consulta UPDATE dinámicamente
+      const fields = [username, email, phone, address, city, dept];
+      const queryParts = [
+        'username = $1',
+        'email = $2',
+        'phone = $3',
+        'address = $4',
+        'city = $5',
+        'dept = $6'
+      ];
+      let paramIndex = 7;
+
+      if (updateData.profile_pic) {
+        fields.push(updateData.profile_pic);
+        queryParts.push(`profile_pic = $${paramIndex++}`);
+      }
+      if (updateData.id_front) {
+        fields.push(updateData.id_front);
+        queryParts.push(`id_front = $${paramIndex++}`);
+      }
+      if (updateData.id_back) {
+        fields.push(updateData.id_back);
+        queryParts.push(`id_back = $${paramIndex++}`);
+      }
+
+      // Asociación a inmobiliaria
+      fields.push(belongs, agencyId);
+      queryParts.push(`belongs_to_agency = $${paramIndex++}`);
+      queryParts.push(`agency_id = $${paramIndex++}`);
+
+      fields.push(userId);
+      const updateQuery = `UPDATE users SET ${queryParts.join(', ')} WHERE id = $${paramIndex}`;
+
+      await pool.query(updateQuery, fields);
+
+      // 5) Refrescar sesión
+      const updatedRes = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
+      req.session.user = updatedRes.rows[0];
+
+      res.redirect('/dashboard');
+    } catch (err) {
+      console.error('Error al actualizar perfil:', err);
+      res.status(500).send('Error al actualizar el perfil.');
     }
-
-    // Procesar documentos de identidad (sin cambios)
-    if (req.files['idFront']) {
-      if (currentFront) fs.unlinkSync(path.join(__dirname, 'public', currentFront));
-      const file = req.files['idFront'][0];
-      const newPath = path.join(userFolder, file.originalname);
-      fs.renameSync(file.path, newPath);
-      updateData.id_front = `/uploads/usuarios/${userUuid}/${file.originalname}`;
-    }
-    if (req.files['idBack']) {
-      if (currentBack) fs.unlinkSync(path.join(__dirname, 'public', currentBack));
-      const file = req.files['idBack'][0];
-      const newPath = path.join(userFolder, file.originalname);
-      fs.renameSync(file.path, newPath);
-      updateData.id_back = `/uploads/usuarios/${userUuid}/${file.originalname}`;
-    }
-
-    // Construir arrays de campos y parámetros
-    const fields = [
-      username,
-      email,
-      phone,
-      address,
-      city,
-      dept
-    ];
-    const queryParts = [
-      'username = $1',
-      'email = $2',
-      'phone = $3',
-      'address = $4',
-      'city = $5',
-      'dept = $6'
-    ];
-    let paramIndex = 7;
-
-    // Archivos actualizados
-    if (updateData.profile_pic) {
-      fields.push(updateData.profile_pic);
-      queryParts.push(`profile_pic = $${paramIndex++}`);
-    }
-    if (updateData.id_front) {
-      fields.push(updateData.id_front);
-      queryParts.push(`id_front = $${paramIndex++}`);
-    }
-    if (updateData.id_back) {
-      fields.push(updateData.id_back);
-      queryParts.push(`id_back = $${paramIndex++}`);
-    }
-
-    // Asociación a inmobiliaria
-    fields.push(belongs, agencyId);
-    queryParts.push(`belongs_to_agency = $${paramIndex++}`);
-    queryParts.push(`agency_id = $${paramIndex++}`);
-
-    // WHERE id
-    fields.push(userId);
-    const updateQuery = `UPDATE users SET ${queryParts.join(', ')} WHERE id = $${paramIndex}`;
-
-    // Ejecutar actualización
-    await pool.query(updateQuery, fields);
-
-    // Refrescar sesión
-    const updatedRes = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
-    req.session.user = updatedRes.rows[0];
-
-    res.redirect('/dashboard');
-  } catch (err) {
-    console.error('Error al actualizar perfil:', err);
-    res.status(500).send('Error al actualizar el perfil.');
   }
-});
+);
 
 
 
