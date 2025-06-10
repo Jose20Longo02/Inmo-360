@@ -1,4 +1,8 @@
 // server.js
+const multer = require('multer');
+const multerS3 = require('multer-s3');
+const AWS = require('aws-sdk');
+const path = require('path');
 const express = require('express');
 const session = require('express-session');
 const bodyParser = require('body-parser');
@@ -53,10 +57,6 @@ app.use((req, res, next) => {
 // =========================
 // CONFIGURACIÓN MULTER
 // =========================
-const multer = require('multer');
-const multerS3 = require('multer-s3');
-const AWS = require('aws-sdk');
-const path = require('path');
 
 // 1) Middleware: subir en memoria (para procesar buffer antes de subir a Spaces)
 //    Útil en /register o /dashboard/profile si conviertes HEIC y luego subes manualmente.
