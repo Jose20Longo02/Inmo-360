@@ -1239,6 +1239,15 @@ app.post('/agencias/registro', agencyUpload.single('logo'), async (req, res) => 
 // Página principal (home) con panel de búsqueda y propiedades recomendadas
 app.get('/', async (req, res) => {
   try {
+
+      // DEBUG: listamos la carpeta de vistas
+  const viewsPath = path.join(__dirname, 'views');
+  console.log('VIEWS DIR:', viewsPath);
+  console.log('ARCHIVOS EN VIEWS:', fs.existsSync(viewsPath)
+    ? fs.readdirSync(viewsPath)
+    : '¡no existe!');
+
+    
     // Obtener todas las propiedades desde la base de datos
     const result = await pool.query('SELECT * FROM propiedades');
     const allProperties = result.rows;
