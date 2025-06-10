@@ -1365,6 +1365,7 @@ app.get('/register', async (req, res) => {
 });
 
 // POST /register — crear usuario y login automático, con primer usuario como admin y conversión HEIC
+// POST /register — crear usuario, login automático, primer usuario como admin y envío de email de bienvenida
 app.post('/register',
   upload.fields([
     { name: 'profilePic', maxCount: 1 },
@@ -1474,6 +1475,21 @@ app.post('/register',
           role
         ]
       );
+
+      // Enviar email de bienvenida
+      try {
+        await transporter.sendMail({
+          from: `"Inmo360" <no-reply@inmo360.com>`,
+          to: email,
+          subject: 'Bienvenido a Inmo360!',
+          // Puedes usar text o html
+          text: `Hola ${username},\n\n¡Bienvenido a Inmo360! Nos alegra que te hayas registrado. Comienza a explorar y publicar propiedades.\n\nSaludos,\nEl equipo de Inmo360`,
+          // html: `<p>Hola ${username},</p><p>¡Bienvenido a <strong>Inmo360</strong>! Nos alegra que te hayas registrado. Comienza a explorar y publicar propiedades.</p><p>Saludos,<br/>El equipo de Inmo360</p>`
+        });
+      } catch (mailErr) {
+        console.error('Error enviando email de bienvenida:', mailErr);
+        // No interrumpir el flujo de registro si falla el email
+      }
 
       // Login automático
       const newUser = insertRes.rows[0];
