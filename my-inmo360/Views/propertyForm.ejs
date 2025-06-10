@@ -245,15 +245,28 @@
       <h3 class="section-title">Galería Multimedia</h3>
     
       <!-- Subir Imágenes -->
-      <div class="multimedia-subblock">
-        <div class="multimedia-subtitle">Imágenes (máx. 8MB c/u)</div>
-        <div class="upload-area">
-          <label for="imagenes" class="upload-label">Elegir Imágenes</label>
-          <span id="imagenes-info" class="file-info">Sin archivos seleccionados</span>
-          <input type="file" name="imagenes" id="imagenes" accept="image/*" multiple hidden>
-        </div>
-        <div id="preview-imagenes" class="preview-container"></div>
-        </div>
+    <div class="multimedia-subblock">
+      <div class="multimedia-subtitle">Imágenes (máx. 8MB c/u)</div>
+      <div class="upload-area">
+        <label for="imagenes" class="upload-label">Elegir Imágenes</label>
+        <span id="imagenes-info" class="file-info">Sin archivos seleccionados</span>
+        <input 
+          type="file" 
+          name="imagenes" 
+          id="imagenes" 
+          accept="
+            image/jpeg,
+            image/png,
+            image/heic,
+            image/heif,
+            image/webp,
+            image/*" 
+          multiple 
+          hidden
+        >
+      </div>
+      <div id="preview-imagenes" class="preview-container"></div>
+    </div>
 
               <!-- Subir Video -->
       <div class="multimedia-subblock">
@@ -445,12 +458,13 @@
   });
 </script>
 
-<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.13.0/Sortable.min.js"></script>
+<!-- Carga la librería HEIC2ANY antes de tu script de preview -->
+<script src="https://unpkg.com/heic2any/dist/heic2any.min.js"></script>
 
-<!-- SCRIPT: Ordenar imágenes con flechas ARRIBA/ABAJO y números fijos -->
+<!-- SCRIPT: Vistas previas para imágenes con soporte HEIC/HEIF -->
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-  const imgInput = document.getElementById('imagenes');
+  const imgInput        = document.getElementById('imagenes');
   const previewContainer = document.getElementById('preview-imagenes');
   let currentFiles = [];
 
@@ -461,174 +475,98 @@ document.addEventListener('DOMContentLoaded', () => {
     imgInput.files = dt.files;
   }
 
-  // Dibuja N slots numerados (1…N) y coloca en cada uno su imagen
-  function renderSlots() {
+  // Convierte HEIC/HEIF a blob JPEG en cliente
+  async function convertHeic(file) {
+    try {
+      return await heic2any({
+        blob: file,
+        toType: 'image/jpeg',
+        quality: 0.8
+      });
+    } catch (err) {
+      console.error('Error convirtiendo HEIC:', err);
+      return file; // fallback
+    }
+  }
+
+  // Dibuja N slots numerados y genera previews
+  async function renderSlots() {
     previewContainer.innerHTML = '';
-    for (let slot = 0; slot < currentFiles.length; slot++) {
-      const file = currentFiles[slot];
+    for (let i = 0; i < currentFiles.length; i++) {
+      let file = currentFiles[i];
       const wrapper = document.createElement('div');
       wrapper.className = 'preview-item';
 
-      // Nº de orden FIJO
+      // Nº de orden
       const badge = document.createElement('span');
       badge.className = 'order-label';
-      badge.innerText = slot + 1;
+      badge.innerText = i + 1;
       wrapper.appendChild(badge);
 
-      // Creamos el contenedor de flechas
-      const arrowCtr = document.createElement('div');
-      arrowCtr.className = 'arrow-controls';
-
-      // Flecha ARRIBA
-      const upBtn = document.createElement('button');
-      upBtn.className = 'move-up';
-      upBtn.innerText = '▲';
-      upBtn.disabled = slot === 0;
-      upBtn.addEventListener('click', ev => {
-        ev.stopPropagation();
-        [currentFiles[slot - 1], currentFiles[slot]] = [currentFiles[slot], currentFiles[slot - 1]];
+      // Flechas para ordenar
+      const ctr = document.createElement('div');
+      ctr.className = 'arrow-controls';
+      const up = document.createElement('button');
+      up.type = 'button'; up.innerText = '▲'; up.disabled = i===0;
+      up.addEventListener('click', e => {
+        e.stopPropagation();
+        [currentFiles[i-1], currentFiles[i]] = [currentFiles[i], currentFiles[i-1]];
         updateInputFiles();
         renderSlots();
       });
-      arrowCtr.appendChild(upBtn);
-
-      // Flecha ABAJO
-      const downBtn = document.createElement('button');
-      downBtn.className = 'move-down';
-      downBtn.innerText = '▼';
-      downBtn.disabled = slot === currentFiles.length - 1;
-      downBtn.addEventListener('click', ev => {
-        ev.stopPropagation();
-        [currentFiles[slot], currentFiles[slot + 1]] = [currentFiles[slot + 1], currentFiles[slot]];
+      const down = document.createElement('button');
+      down.type = 'button'; down.innerText = '▼'; down.disabled = i===currentFiles.length-1;
+      down.addEventListener('click', e => {
+        e.stopPropagation();
+        [currentFiles[i], currentFiles[i+1]] = [currentFiles[i+1], currentFiles[i]];
         updateInputFiles();
         renderSlots();
       });
-      arrowCtr.appendChild(downBtn);
+      ctr.appendChild(up);
+      ctr.appendChild(down);
+      wrapper.appendChild(ctr);
 
-      // Añadimos el contenedor al wrapper (en lugar de los dos append individuales)
-      wrapper.appendChild(arrowCtr);
-
-      // Eliminar este slot/imagen
-      const removeBtn = document.createElement('button');
-      removeBtn.className = 'remove-preview';
-      removeBtn.innerText = '×';
-      removeBtn.addEventListener('click', ev => {
-        ev.stopPropagation();
-        currentFiles.splice(slot, 1);
+      // Botón eliminar
+      const rem = document.createElement('button');
+      rem.type = 'button'; rem.className = 'remove-preview'; rem.innerText = '×';
+      rem.addEventListener('click', e => {
+        e.stopPropagation();
+        currentFiles.splice(i,1);
         updateInputFiles();
         renderSlots();
       });
-      wrapper.appendChild(removeBtn);
+      wrapper.appendChild(rem);
 
-      // Miniatura de la imagen
-      const img = document.createElement('img');
-      img.className = 'preview-img';
+      // Generar miniatura (incluye conversión HEIC si hace falta)
+      const imgEl = document.createElement('img');
+      imgEl.className = 'preview-img';
+      let blob = file;
+      const isHeic = file.type==='image/heic'||file.type==='image/heif'
+                   || /\.heic$/i.test(file.name)|| /\.heif$/i.test(file.name);
+      if (isHeic) {
+        blob = await convertHeic(file);
+      }
       const reader = new FileReader();
-      reader.onload = e => img.src = e.target.result;
-      reader.readAsDataURL(file);
-      wrapper.appendChild(img);
+      reader.onload = e => imgEl.src = e.target.result;
+      reader.readAsDataURL(blob);
+      wrapper.appendChild(imgEl);
 
       previewContainer.appendChild(wrapper);
     }
   }
 
-  // Cuando el usuario selecciona nuevas imágenes
-  imgInput.addEventListener('change', () => {
+  // Al cambiar selección
+  imgInput.addEventListener('change', async () => {
     currentFiles = Array.from(imgInput.files);
     updateInputFiles();
-    renderSlots();
+    await renderSlots();
   });
 
-  // Si ya hay archivos (p.ej. en edición), los mostramos
+  // Si ya hay archivos (edición)
   if (imgInput.files.length) {
     currentFiles = Array.from(imgInput.files);
     renderSlots();
   }
 });
-
-
-
-
-
-
-
-
-document.addEventListener('DOMContentLoaded', () => {
-    // Obtén referencias a los inputs y contenedores
-    const videoInput = document.getElementById('video');
-    const planoInput = document.getElementById('plano');
-
-    // Manejador genérico de preview
-    function previewFiles(input, previewContainerId, type = 'image') {
-      const previewContainer = document.getElementById(previewContainerId);
-      // Limpiar todo antes de renderizar
-      previewContainer.innerHTML = '';
-
-      // Convertir FileList a array para poder modificarlo
-      const filesArr = Array.from(input.files);
-      const dt       = new DataTransfer();
-
-      filesArr.forEach((file, index) => {
-        if (!file.type.startsWith(type + '/')) return;
-
-        // Lo agregamos al DataTransfer para poder reconstruir input.files tras eliminar
-        dt.items.add(file);
-
-        const reader = new FileReader();
-        reader.onload = e => {
-          // Wrapper
-          const wrapper = document.createElement('div');
-          wrapper.className = 'preview-item';
-
-          // Botón “×” para eliminar
-          const removeBtn = document.createElement('button');
-          removeBtn.type = 'button';
-          removeBtn.className = 'remove-preview';
-          removeBtn.innerText = '×';
-          removeBtn.addEventListener('click', ev => {
-            ev.stopPropagation();
-            // Quitar este archivo del array y volver a renderizar
-            filesArr.splice(index, 1);
-            input.files = (() => {
-              const newDt = new DataTransfer();
-              filesArr.forEach(f => newDt.items.add(f));
-              return newDt.files;
-            })();
-            previewFiles(input, previewContainerId, type);
-          });
-          wrapper.appendChild(removeBtn);
-
-          // Número fijo (opcional, si quieres mostrarlo)
-          // const badge = document.createElement('span');
-          // badge.className = 'order-label';
-          // badge.innerText = index + 1;
-          // wrapper.appendChild(badge);
-
-          // Miniatura
-          if (type === 'video') {
-            const vid = document.createElement('video');
-            vid.src = e.target.result;
-            vid.controls = true;
-            vid.className = 'preview-video';
-            wrapper.appendChild(vid);
-          } else {
-            const img = document.createElement('img');
-            img.src = e.target.result;
-            img.className = 'preview-img';
-            wrapper.appendChild(img);
-          }
-
-          previewContainer.appendChild(wrapper);
-        };
-        reader.readAsDataURL(file);
-      });
-
-      // Reasignar los archivos al input
-      input.files = dt.files;
-    }
-
-    videoInput.addEventListener('change', () => previewFiles(videoInput, 'preview-video', 'video'));
-    planoInput.addEventListener('change', () => previewFiles(planoInput, 'preview-plano', 'image'));
-  });
 </script>
 

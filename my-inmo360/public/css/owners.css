@@ -81,6 +81,8 @@
   }
   .servicio-card {
     display: flex;
+    text-decoration: none;
+    color: black;
     flex-direction: column;
     justify-content: center;
     border: 1px solid #D3D3D3;
@@ -90,6 +92,10 @@
     text-align: left;
     cursor: pointer;
     height: 165px;
+  }
+  .servicio-card a{
+    text-decoration: none;
+    color: #000;
   }
   .servicio-card:hover {
     background-color: #75FBD3;

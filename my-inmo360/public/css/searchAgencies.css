@@ -1,0 +1,231 @@
+/* =============================== */
+/*     STYLES PARA AGENCIAS       */
+/* =============================== */
+
+/* Reset muy básico */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #f8f9fa;
+  color: #212529;
+}
+
+/* HERO / BANNER */
+.agencies-hero {
+  position: relative;
+  /* Fondo de imagen en lugar de color sólido */
+  background-image: url('../images/search-agencies-bg.JPG'); /* ← Reemplaza con la ruta real */
+  background-size:cover;
+  background-position: center;
+  height: 40vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  color: white;
+}
+
+.agencies-hero__overlay {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%;
+  height: 100%;
+  /* Overlay negro semitransparente */
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.agencies-hero__content {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  padding: 1rem;
+}
+
+.agencies-hero__content h2 {
+  font-size: 2.2rem;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.agencies-hero__content p {
+  font-size: 1rem;
+  margin-bottom: 1rem;
+  opacity: 0.9;
+}
+
+/* PANEL DE BÚSQUEDA */
+.agencies-search-panel {
+  display: flex;
+  gap: 0.5rem;
+  max-width: 900px;
+  margin: 0 auto;
+  background: #ffffff;
+  padding: 0.8rem;
+  border-radius: 6px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+.agencies-search-panel .form-group {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.agencies-search-panel select {
+  padding: 0.5rem;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  background-color: #f8f9fa;
+  color: #212529;
+  font-size: 0.95rem;
+  transition: border-color 0.2s;
+}
+
+.agencies-search-panel select:focus {
+  outline: none;
+  border-color: #75FBD3;
+}
+
+.agencies-search-panel .btn-search {
+  background-color: #75FBD3;
+  color: black;
+  border: none;
+  padding: 0.6rem 1rem;
+  font-weight: 600;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.agencies-search-panel .btn-search:hover {
+  background-color: #5ae6c4;
+}
+
+/* RESULTADOS */
+.agencies-results {
+  padding: 2rem 1rem;
+  background-color: #f8f9fa;
+}
+
+.agencies-results .container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.agencies-results h3 {
+  font-size: 1.4rem;
+  margin-bottom: 1rem;
+  color: black;
+}
+
+/* GRID DE CARDS */
+.results-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.5rem;
+}
+
+/* CADA CARD */
+.agency-card {
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.agency-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+/* LOGO */
+.agency-card__logo {
+  background: #eceeef;
+  height: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.agency-card__logo img {
+  max-height: 100%;
+  max-width: 100%;
+  object-fit: contain;
+}
+
+.logo-placeholder {
+  color: #6c757d;
+  font-size: 0.9rem;
+}
+
+/* INFORMACIÓN */
+.agency-card__info {
+  padding: 1rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.agency-name {
+  font-size: 1.15rem;
+  color: black;
+  margin-bottom: 0.5rem;
+}
+
+.agency-location {
+  font-size: 0.95rem;
+  color: #495057;
+  margin-bottom: 20px;
+  margin-top: 10px;
+}
+
+.agency-contact {
+  display: block;
+  font-size: 0.9rem;
+  color: #343a40;
+  margin-bottom: 20px;
+}
+
+/* BOTÓN “VER DETALLE” */
+.agency-visit-btn {
+  text-align: center;
+  background-color: #75FBD3;
+  color: black;
+  padding: 0.5rem;
+  border-radius: 4px;
+  text-decoration: none;
+  font-size: 0.95rem;
+  font-weight: 600;
+  transition: background-color 0.2s;
+}
+
+.agency-visit-btn:hover {
+  background-color: #5ae6c4;
+}
+
+/* MENSAJE “NO RESULTADOS” */
+.no-results {
+  text-align: center;
+  font-size: 1rem;
+  color: #6c757d;
+  margin-top: 2rem;
+}
+
+/* RESPONSIVIDAD */
+@media (max-width: 768px) {
+  .agencies-search-panel {
+    flex-direction: column;
+  }
+  .agencies-hero {
+    height: 30vh;
+  }
+}

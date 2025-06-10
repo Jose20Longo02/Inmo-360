@@ -38,11 +38,23 @@
       <!-- Paso 2: Información de Perfil -->
       <div class="step" id="step-2" style="display: none;">
         <h3 class="step-title">Información de Perfil</h3>
-        <div class="input-group">
-          <label for="profilePic">Foto de Perfil <span class="required">*</span></label>
-          <input type="file" name="profilePic" id="profilePic" accept="image/*" required>
-          <div id="preview-profilePic" class="preview-container"></div>
-        </div>
+      <div class="input-group">
+        <label for="profilePic">Foto de Perfil <span class="required">*</span></label>
+        <input 
+          type="file" 
+          name="profilePic" 
+          id="profilePic" 
+          accept="
+            image/jpeg,
+            image/png,
+            image/heic,
+            image/heif,
+            image/webp,
+            image/*"
+          required
+        >
+        <div id="preview-profilePic" class="preview-container"></div>
+      </div>
         <div class="input-group">
           <label for="dept">Departamento</label>
           <select name="dept" id="dept" required>
@@ -323,26 +335,51 @@ document.addEventListener('DOMContentLoaded', function() {
   });
   </script>
 
-<!-- SCRIPT: Vistas previas para imágenes -->
+<!-- Añade esto al <head> o justo antes de tu script -->
+<script src="https://unpkg.com/heic2any/dist/heic2any.min.js"></script>
+
+<!-- SCRIPT: Vistas previas para imágenes con soporte HEIC/HEIF -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-  function previewFiles(input, previewContainerId) {
+  async function previewFile(file, previewContainer) {
+    let blob = file;
+    const isHeic = file.type === 'image/heic' ||
+                   file.type === 'image/heif' ||
+                   /\.heic$/i.test(file.name) ||
+                   /\.heif$/i.test(file.name);
+    if (isHeic) {
+      try {
+        blob = await heic2any({
+          blob: file,
+          toType: 'image/jpeg',
+          quality: 0.8
+        });
+      } catch (err) {
+        console.error('Error convirtiendo HEIC:', err);
+        blob = file; // fallback
+      }
+    }
+    return new Promise(resolve => {
+      const reader = new FileReader();
+      reader.onload = e => resolve(e.target.result);
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  async function previewFiles(input, previewContainerId) {
     const previewContainer = document.getElementById(previewContainerId);
     previewContainer.innerHTML = '';
     if (input.files) {
-      Array.from(input.files).forEach(file => {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-          const img = document.createElement('img');
-          img.src = e.target.result;
-          img.className = 'preview-img';
-          previewContainer.appendChild(img);
-        };
-        reader.readAsDataURL(file);
-      });
+      for (const file of input.files) {
+        const dataUrl = await previewFile(file, previewContainer);
+        const img = document.createElement('img');
+        img.src = dataUrl;
+        img.className = 'preview-img';
+        previewContainer.appendChild(img);
+      }
     }
   }
-  
+
   document.getElementById('profilePic').addEventListener('change', function() {
     previewFiles(this, 'preview-profilePic');
   });

@@ -9,6 +9,8 @@ const multer = require('multer');
 const pool = require('./db');
 const methodOverride = require('method-override');
 const locationsData = require('./locations');
+const sharp = require('sharp');
+const heicConvert = require('heic-convert');
 const { departamentos } = locationsData;
 const fs = require('fs-extra'); // <- Asegúrate de instalarlo: npm install fs-extra
 
@@ -54,17 +56,35 @@ app.use((req, res, next) => {
 // CONFIGURACIÓN MULTER
 // =========================
 const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, '/tmp'); // Guardado temporal, moveremos después
+  destination(req, file, cb) {
+    cb(null, '/tmp'); // o la carpeta que uses antes de mover a uploads finales
   },
-  filename: function (req, file, cb) {
+  filename(req, file, cb) {
     const ext = path.extname(file.originalname);
-    cb(null, Date.now() + ext);
+    cb(null, `${Date.now()}${ext}`);
   }
 });
 
-// Configuración para aceptar imágenes, video y plano
-const upload = multer({ storage });
+// 2) File filter: permite cualquier mimetype que empiece por image/
+function fileFilter(req, file, cb) {
+  if (file.mimetype.startsWith('image/')) {
+    cb(null, true);
+  } else {
+    cb(new Error('Formato no soportado: solo imágenes'), false);
+  }
+}
+
+// 3) Opcional: límites de tamaño
+const limits = {
+  fileSize: 8 * 1024 * 1024  // 8 MB por archivo
+};
+
+// 4) Inicializar Multer
+const upload = multer({
+  storage,
+  fileFilter,
+  limits
+});
 
 
 app.get('/owners', (req, res) => {
@@ -73,6 +93,143 @@ app.get('/owners', (req, res) => {
 
 app.get('/agencies', (req, res) => {
   res.render('agencies');
+});
+
+app.get('/search-agencies', async (req, res) => {
+  try {
+    // Suponemos que tienes locationsData.departamentos cargado
+    // para mostrar la lista de departamentos
+    const departamentos = locationsData.departamentos;
+    res.render('searchAgencies', {
+      departamentos,
+      query: {},        // Inicialmente sin filtros
+      results: []       // Sin resultados al cargar por primera vez
+    });
+  } catch (err) {
+    console.error('Error cargando página de inmobiliarias:', err);
+    res.status(500).send('Error al cargar la página');
+  }
+});
+
+// POST /agencies — Procesar búsqueda de inmobiliarias
+app.post('/search-agencies', async (req, res) => {
+  const { departamento, municipio } = req.body;
+  try {
+    // 1) Filtrar según los campos que vengan (departamento y/o municipio)
+    let sql = `SELECT id, name, email, phone, departamento, municipio, logo_url 
+               FROM inmobiliarias 
+               WHERE estado = 'aprobada'`;
+    const params = [];
+
+    if (departamento) {
+      params.push(departamento);
+      sql += ` AND departamento = $${params.length}`;
+    }
+    if (municipio && municipio.trim() !== "") {
+      params.push(municipio);
+      sql += ` AND municipio = $${params.length}`;
+    }
+
+    // 2) Ejecutar consulta
+    const result = await pool.query(sql, params);
+    const agenciasEncontradas = result.rows;
+
+    // 3) Renderizar de nuevo la misma vista con resultados
+    const departamentos = locationsData.departamentos;
+    res.render('searchAgencies', {
+      departamentos,
+      query: { departamento, municipio },
+      results: agenciasEncontradas
+    });
+  } catch (err) {
+    console.error('Error buscando inmobiliarias:', err);
+    res.status(500).send('Error al buscar inmobiliarias');
+  }
+});
+
+// DELETE o comenta la ruta antigua que apuntaba a "agencyDetails".
+// Agrega en su lugar esta ruta:
+
+app.get('/buscar-inmobiliaria/:nombre', async (req, res) => {
+  const agenciaNombre = req.params.nombre;
+  const page          = parseInt(req.query.page, 10) || 1;
+  const limit         = 6;
+  const offset        = (page - 1) * limit;
+
+  try {
+    // 1) Obtener datos de la inmobiliaria por su nombre (suponiendo único)
+    const agenciaRes = await pool.query(
+      `SELECT id, name, email, phone, address, departamento, municipio, logo_url, estado
+         FROM inmobiliarias
+        WHERE name = $1
+          AND estado = 'aprobada'`,
+      [agenciaNombre]
+    );
+    if (agenciaRes.rows.length === 0) {
+      return res.status(404).send('Inmobiliaria no encontrada');
+    }
+    const agency = agenciaRes.rows[0];
+    const agencyId = agency.id;
+
+    // 2) Obtener agentes de esta inmobiliaria
+    const agentsRes = await pool.query(
+      `SELECT id, username, profile_pic
+         FROM users
+        WHERE belongs_to_agency = true
+          AND agency_id = $1`,
+      [agencyId]
+    );
+    const agents = agentsRes.rows;
+
+    // 3) Contar propiedades aprobadas de la agencia
+    const countRes = await pool.query(
+      `SELECT COUNT(*) AS cnt
+         FROM propiedades p
+         JOIN users u ON p.user_id = u.id
+        WHERE u.agency_id = $1
+          AND p.estado = 'aprobada'`,
+      [agencyId]
+    );
+    const totalProps = parseInt(countRes.rows[0].cnt, 10);
+
+    // 4) Traer las propiedades paginadas
+    const propsRes = await pool.query(
+      `SELECT
+          p.id,
+          p.titulo,
+          p.departamento,
+          p.municipio,
+          p.zona,
+          p.operacion,
+          p.precio,
+          p.imagenes_urls,
+          p.created_at
+         FROM propiedades p
+         JOIN users u ON p.user_id = u.id
+        WHERE u.agency_id = $1
+          AND p.estado = 'aprobada'
+        ORDER BY p.created_at DESC
+        LIMIT $2 OFFSET $3`,
+      [agencyId, limit, offset]
+    );
+    const propiedades = propsRes.rows;
+
+    // 5) Calcular total de páginas
+    const totalPages = Math.ceil(totalProps / limit);
+
+    // 6) Renderizar la nueva vista "agencyProfile"
+    res.render('agencyProfile', {
+      agency,
+      agents,
+      propiedades,
+      currentPage: page,
+      totalPages,
+      totalProps
+    });
+  } catch (err) {
+    console.error('Error cargando detalle de inmobiliaria:', err);
+    res.status(500).send('Error al cargar detalle de la inmobiliaria');
+  }
 });
 
 
@@ -167,122 +324,7 @@ app.get('/admin/agencies', isAuthenticated, async (req, res) => {
 // const nodemailer = require('nodemailer');
 // const transporter = nodemailer.createTransport({ /* tu configuración SMTP */ });
 
-// Endpoint para actualizar perfil de usuario
-app.post('/dashboard/profile', isAuthenticated, upload.fields([
-  { name: 'profilePic', maxCount: 1 },
-  { name: 'idFront', maxCount: 1 },
-  { name: 'idBack', maxCount: 1 }
-]), async (req, res) => {
-  try {
-    const userId = req.session.user.id;
-    const {
-      username,
-      email,
-      phone,
-      address,
-      city,
-      dept,
-      belongsToAgency,
-      agency
-    } = req.body;
 
-    // Determinar asociación a inmobiliaria
-    const belongs = belongsToAgency === 'true';
-    const agencyId = belongs ? agency : null;
-
-    // Obtener UUID y fotos actuales
-    const userResult = await pool.query(
-      'SELECT uuid, profile_pic, id_front, id_back FROM users WHERE id = $1',
-      [userId]
-    );
-    if (userResult.rows.length === 0) return res.status(404).send('Usuario no encontrado.');
-
-    const { uuid: userUuid, profile_pic: currentPic, id_front: currentFront, id_back: currentBack } = userResult.rows[0];
-    const userFolder = path.join(__dirname, 'public', 'uploads', 'usuarios', userUuid);
-    if (!fs.existsSync(userFolder)) fs.mkdirSync(userFolder, { recursive: true });
-
-    const updateData = { profile_pic: null, id_front: null, id_back: null };
-
-    // Procesar nuevos archivos si existen
-    if (req.files['profilePic']) {
-      if (currentPic) {
-        const oldPath = path.join(__dirname, 'public', currentPic);
-        if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
-      }
-      const file = req.files['profilePic'][0];
-      const newPath = path.join(userFolder, file.originalname);
-      fs.renameSync(file.path, newPath);
-      updateData.profile_pic = `/uploads/usuarios/${userUuid}/${file.originalname}`;
-    }
-    if (req.files['idFront']) {
-      if (currentFront) fs.unlinkSync(path.join(__dirname, 'public', currentFront));
-      const file = req.files['idFront'][0];
-      const newPath = path.join(userFolder, file.originalname);
-      fs.renameSync(file.path, newPath);
-      updateData.id_front = `/uploads/usuarios/${userUuid}/${file.originalname}`;
-    }
-    if (req.files['idBack']) {
-      if (currentBack) fs.unlinkSync(path.join(__dirname, 'public', currentBack));
-      const file = req.files['idBack'][0];
-      const newPath = path.join(userFolder, file.originalname);
-      fs.renameSync(file.path, newPath);
-      updateData.id_back = `/uploads/usuarios/${userUuid}/${file.originalname}`;
-    }
-
-    // Construir arrays de campos y parámetros
-    const fields = [
-      username,
-      email,
-      phone,
-      address,
-      city,
-      dept
-    ];
-    const queryParts = [
-      'username = $1',
-      'email = $2',
-      'phone = $3',
-      'address = $4',
-      'city = $5',
-      'dept = $6'
-    ];
-    let paramIndex = 7;
-
-    // Archivos actualizados
-    if (updateData.profile_pic) {
-      fields.push(updateData.profile_pic);
-      queryParts.push(`profile_pic = $${paramIndex++}`);
-    }
-    if (updateData.id_front) {
-      fields.push(updateData.id_front);
-      queryParts.push(`id_front = $${paramIndex++}`);
-    }
-    if (updateData.id_back) {
-      fields.push(updateData.id_back);
-      queryParts.push(`id_back = $${paramIndex++}`);
-    }
-
-    // Asociación a inmobiliaria
-    fields.push(belongs, agencyId);
-    queryParts.push(`belongs_to_agency = $${paramIndex++}`, `agency_id = $${paramIndex++}`);
-
-    // WHERE
-    fields.push(userId);
-    const updateQuery = `UPDATE users SET ${queryParts.join(', ')} WHERE id = $${paramIndex}`;
-
-    // Ejecutar actualización
-    await pool.query(updateQuery, fields);
-
-    // Refrescar sesión
-    const updatedRes = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
-    req.session.user = updatedRes.rows[0];
-
-    res.redirect('/dashboard');
-  } catch (err) {
-    console.error('Error al actualizar perfil:', err);
-    res.status(500).send('Error al actualizar el perfil.');
-  }
-});
 
 app.post('/admin/agencies/:id/aprobar', isAuthenticated, async (req, res) => {
   const { id } = req.params;
@@ -707,6 +749,315 @@ app.get('/admin/stats/users', requireAdmin, async (req, res) => {
 });
 
 
+// …
+// justo debajo de donde haces: const app = express(), const pool = require('./db'), const requireAdmin = require('./middlewares/requireAdmin'), etc.
+// …
+
+// …
+// (Asegúrate de que ya has definido: const app = express(); const pool = require('./db'); const requireAdmin = require('./middlewares/requireAdmin'); etc.)
+// …
+
+// ------------------------------
+// GET /admin/stats/properties — Estadísticas de Propiedades
+// ------------------------------
+app.get('/admin/stats/properties', requireAdmin, async (req, res) => {
+  try {
+    // 1. Total de propiedades
+    const { rows: [{ count: totalProps }] } = await pool.query(
+      `SELECT COUNT(*) AS count FROM propiedades`
+    );
+
+    // 2. Propiedades por estado
+    const statesRes = await pool.query(`
+      SELECT estado, COUNT(*) AS cnt
+      FROM propiedades
+      GROUP BY estado
+    `);
+
+    // 3. Propiedades por tipo
+    const typesRes = await pool.query(`
+      SELECT tipo_propiedad, COUNT(*) AS cnt
+      FROM propiedades
+      GROUP BY tipo_propiedad
+    `);
+
+    // 4. Propiedades por operación
+    const opsRes = await pool.query(`
+      SELECT operacion, COUNT(*) AS cnt
+      FROM propiedades
+      GROUP BY operacion
+    `);
+
+    // 5. Precio promedio y mediana por tipo de propiedad
+    const priceStatsRes = await pool.query(`
+      SELECT
+        tipo_propiedad,
+        ROUND(AVG(precio)::numeric, 2)                                          AS avg_price,
+        PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY precio)::numeric(12,2)     AS med_price
+      FROM propiedades
+      GROUP BY tipo_propiedad
+    `);
+
+    // 6. Nuevas propiedades por día (últimos 30 días)
+    const newPerDayRes = await pool.query(`
+      SELECT 
+        d::date AS day,
+        COALESCE(COUNT(p.*), 0) AS cnt
+      FROM generate_series((current_date - interval '29 days')::date, current_date::date, '1 day') AS d
+      LEFT JOIN propiedades p
+        ON p.created_at::date = d::date
+      GROUP BY d
+      ORDER BY d
+    `);
+
+    // 7. Visitas totales, clicks_whatsapp, clicks_telefono, clicks_email por día (últimos 30 días)
+    const engagementRes = await pool.query(`
+      SELECT
+        d::date AS day,
+        COALESCE(SUM(p.visitas),0)         AS visitas,
+        COALESCE(SUM(p.clicks_whatsapp),0) AS wa_clicks,
+        COALESCE(SUM(p.clicks_telefono),0) AS tel_clicks,
+        COALESCE(SUM(p.clicks_email),0)    AS email_clicks
+      FROM generate_series((current_date - interval '29 days')::date, current_date::date, '1 day') AS d
+      LEFT JOIN propiedades p
+        ON p.created_at::date = d::date
+      GROUP BY d
+      ORDER BY d
+    `);
+
+    // 8. Top 10 departamentos con más propiedades aprobadas
+    const topGeoRes = await pool.query(`
+      SELECT departamento, COUNT(*) AS cnt
+      FROM propiedades
+      WHERE estado = 'aprobada'
+      GROUP BY departamento
+      ORDER BY cnt DESC
+      LIMIT 10
+    `);
+
+    // 9. Proporción de lujo vs no lujo
+    const { rows: [{ cnt_luxury, cnt_nonlux }] } = await pool.query(`
+      SELECT
+        COUNT(*) FILTER (WHERE luxo = true)  AS cnt_luxury,
+        COUNT(*) FILTER (WHERE luxo = false) AS cnt_nonlux
+      FROM propiedades
+    `);
+
+    // 10. Promedio de imágenes por propiedad, porcentaje con video y porcentaje con plano
+    const mediaRes = await pool.query(`
+      SELECT
+        ROUND(AVG(jsonb_array_length(imagenes_urls))::numeric, 2)    AS avg_images,
+        COUNT(*) FILTER (WHERE video_url IS NOT NULL)   AS with_video,
+        COUNT(*) FILTER (WHERE plano_url IS NOT NULL)   AS with_plano,
+        COUNT(*) AS total_count
+      FROM propiedades
+    `);
+    const {
+      avg_images,
+      with_video,
+      with_plano,
+      total_count
+    } = mediaRes.rows[0];
+
+    // 11. Top 5 Agencias con más Propiedades publicadas (solo aprobadas)
+    const topAgenciesRes = await pool.query(`
+      SELECT ag.name AS agency_name, COUNT(*) AS cnt
+      FROM propiedades p
+      JOIN users u ON p.user_id = u.id
+      JOIN inmobiliarias ag ON u.agency_id = ag.id
+      WHERE p.estado = 'aprobada'
+      GROUP BY ag.name
+      ORDER BY cnt DESC
+      LIMIT 5
+    `);
+
+    // 12. Top 5 Anunciantes con más visitas en los últimos 30 días
+    const topAdvertisersRes = await pool.query(`
+      SELECT u.username AS advertiser, SUM(p.visitas) AS total_visits
+      FROM propiedades p
+      JOIN users u ON p.user_id = u.id
+      WHERE p.created_at > now() - interval '30 days'
+      GROUP BY u.username
+      ORDER BY total_visits DESC
+      LIMIT 5
+    `);
+
+    // 13. Top 5 Propiedades con más visitas en los últimos 30 días
+    const topPropsRes = await pool.query(`
+      SELECT p.titulo, p.visitas
+      FROM propiedades p
+      WHERE p.created_at > now() - interval '30 days'
+      ORDER BY p.visitas DESC
+      LIMIT 5
+    `);
+
+    // Renderizamos la vista y le pasamos TODOS los datos:
+    res.render('statsProperties', {
+      totalProps:       parseInt(totalProps, 10),
+      byState:          statesRes.rows,
+      byType:           typesRes.rows,
+      byOperation:      opsRes.rows,
+      priceStats:       priceStatsRes.rows,
+      newPerDay:        newPerDayRes.rows,
+      engagement:       engagementRes.rows,
+      topGeo:           topGeoRes.rows,
+      cntLuxury:        parseInt(cnt_luxury, 10),
+      cntNonlux:        parseInt(cnt_nonlux, 10),
+      avgImages:        parseFloat(avg_images),
+      withVideo:        parseInt(with_video, 10),
+      withPlano:        parseInt(with_plano, 10),
+      totalCount:       parseInt(total_count, 10),
+      topAgencies:      topAgenciesRes.rows,
+      topAdvertisers:   topAdvertisersRes.rows,
+      topProps:         topPropsRes.rows
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Error al cargar estadísticas de propiedades');
+  }
+});
+
+
+// GET /admin/stats/agencies — Estadísticas de Inmobiliarias
+// ... otras configuraciones de express, middleware, etc.
+
+app.get('/admin/stats/agencies', requireAdmin, async (req, res) => {
+  try {
+    // 1. Total de agencias
+    const { rows: [{ count: totalAgencies }] } =
+      await pool.query(`SELECT COUNT(*) AS count FROM inmobiliarias`);
+
+    // 2. Agencias por estado
+    const statesRes = await pool.query(`
+      SELECT estado, COUNT(*) AS cnt
+      FROM inmobiliarias
+      GROUP BY estado
+    `);
+
+    // 3. Nuevas agencias en los últimos 30 días
+    const newRes = await pool.query(`
+      SELECT to_char(created_at::date,'YYYY-MM-DD') AS day,
+             COUNT(*) AS cnt
+      FROM inmobiliarias
+      WHERE created_at > now() - interval '30 days'
+      GROUP BY day
+      ORDER BY day
+    `);
+
+    // 4. Distribución por departamento (TOP 10)
+    const geoRes = await pool.query(`
+      SELECT departamento, COUNT(*) AS cnt
+      FROM inmobiliarias
+      WHERE departamento IS NOT NULL
+      GROUP BY departamento
+      ORDER BY cnt DESC
+      LIMIT 10
+    `);
+
+    // 5. Top 5 Agencias con más propiedades publicadas
+    const topPropsRes = await pool.query(`
+      SELECT i.name            AS agencia,
+             COUNT(p.id)       AS cnt_props
+      FROM inmobiliarias i
+      JOIN users u       ON u.agency_id = i.id
+      JOIN propiedades p ON p.user_id = u.id
+      WHERE p.estado = 'aprobada'
+      GROUP BY i.name
+      ORDER BY cnt_props DESC
+      LIMIT 5
+    `);
+
+    // 6. Top 5 Agencias con más visitas en los últimos 30 días
+    const topVisitsRes = await pool.query(`
+      SELECT i.name                      AS agencia,
+             COALESCE(SUM(p.visitas),0)  AS total_visits
+      FROM inmobiliarias i
+      JOIN users u       ON u.agency_id = i.id
+      JOIN propiedades p ON p.user_id = u.id
+      WHERE p.created_at > now() - interval '30 days'
+      GROUP BY i.name
+      ORDER BY total_visits DESC
+      LIMIT 5
+    `);
+
+    // 7. Promedio de propiedades por agencia
+    //    Si no hay agencias o no tienen propiedades, devolvemos 0
+    const { rows: [{ avgprops }] } = await pool.query(`
+      SELECT COALESCE(ROUND(AVG(cnt),2), 0)::float AS avgprops
+      FROM (
+        SELECT i.id, COUNT(p.id) AS cnt
+        FROM inmobiliarias i
+        JOIN users u       ON u.agency_id = i.id
+        JOIN propiedades p ON p.user_id = u.id
+        GROUP BY i.id
+      ) sub
+    `);
+
+    // 8. Porcentaje de agencias que tienen ≥ 5 propiedades
+    const { rows: [{ pctfive }] } = await pool.query(`
+      SELECT COALESCE(
+        ROUND(
+          100.0 * SUM(CASE WHEN cnt >= 5 THEN 1 ELSE 0 END)
+          / NULLIF(COUNT(*),0)
+        , 2)
+      , 0)::float AS pctfive
+      FROM (
+        SELECT i.id, COUNT(p.id) AS cnt
+        FROM inmobiliarias i
+        JOIN users u       ON u.agency_id = i.id
+        JOIN propiedades p ON p.user_id = u.id
+        GROUP BY i.id
+      ) sub
+    `);
+
+    // 9. Top 5 Agencias por ratio de aprobación (aprobadas / totales)
+    const topRatioRes = await pool.query(`
+      SELECT i.name AS agencia,
+             ROUND(
+               100.0 * SUM(CASE WHEN p.estado = 'aprobada' THEN 1 ELSE 0 END)
+               / NULLIF(COUNT(p.id),0)
+             , 2)::float AS approval_ratio
+      FROM inmobiliarias i
+      JOIN users u       ON u.agency_id = i.id
+      JOIN propiedades p ON p.user_id = u.id
+      GROUP BY i.name
+      HAVING COUNT(p.id) > 0
+      ORDER BY approval_ratio DESC
+      LIMIT 5
+    `);
+
+    // 10. Evolución mensual de nuevas agencias en los últimos 6 meses
+    const evoRes = await pool.query(`
+      SELECT to_char(created_at, 'YYYY-MM') AS month,
+             COUNT(*)                  AS cnt
+      FROM inmobiliarias
+      WHERE created_at > date_trunc('month', now()) - INTERVAL '5 months'
+      GROUP BY month
+      ORDER BY month
+    `);
+
+    // Renderizar la vista con todos los datos
+    res.render('statsAgencies', {
+      totalAgencies: parseInt(totalAgencies, 10),
+      states:        statesRes.rows,       // [{ estado, cnt }, …]
+      newAgencies:   newRes.rows,          // [{ day, cnt }, …]
+      geo:           geoRes.rows,          // [{ departamento, cnt }, …]
+      topProps:      topPropsRes.rows,     // [{ agencia, cnt_props }, …]
+      topVisits:     topVisitsRes.rows,    // [{ agencia, total_visits }, …]
+      avgProps:      parseFloat(avgprops), // número
+      pctFive:       parseFloat(pctfive),  // número
+      topRatio:      topRatioRes.rows,     // [{ agencia, approval_ratio }, …]
+      evo:           evoRes.rows           // [{ month, cnt }, …]
+    });
+  } catch (err) {
+    console.error('>>> ERROR en /admin/stats/agencies:', err.stack || err);
+    res.status(500).send('Error al cargar estadísticas de inmobiliarias');
+  }
+});
+
+
+
+
 
 
 
@@ -1010,100 +1361,143 @@ app.get('/register', async (req, res) => {
 
 // POST /register — crear usuario y, si viene el flag, redirigir a registrar agencia
 // Registro de usuarios — login automático tras crear cuenta
-app.post('/register',
-  upload.fields([
-    { name: 'profilePic', maxCount: 1 },
-    { name: 'idFront',     maxCount: 1 },
-    { name: 'idBack',      maxCount: 1 }
-  ]),
-  async (req, res) => {
-    try {
-      const userUuid = uuidv4();
-      const {
-        username, email, password,
-        dept, city, address, phone,
-        belongsToAgency, agency,
-        redirectToAgency
-      } = req.body;
+// Endpoint para actualizar perfil de usuario
+app.post('/dashboard/profile', isAuthenticated, upload.fields([
+  { name: 'profilePic', maxCount: 1 },
+  { name: 'idFront', maxCount: 1 },
+  { name: 'idBack', maxCount: 1 }
+]), async (req, res) => {
+  try {
+    // Logs para depuración
+    console.log('🔥 PETICIÓN /dashboard/profile recibida');
+    console.log('FILES:', req.files);
+    console.log('BODY:',  req.body);
 
-      // Validar obligatorios
-      if (!username || !email || !password || !dept || !city || !address || !phone) {
-        return res.status(400).send("Todos los campos obligatorios deben estar llenos.");
-      }
+    const userId = req.session.user.id;
+    const {
+      username,
+      email,
+      phone,
+      address,
+      city,
+      dept,
+      belongsToAgency,
+      agency
+    } = req.body;
 
-      // Verificar duplicados
-      const dup = await pool.query(
-        "SELECT 1 FROM users WHERE username=$1 OR email=$2",
-        [username, email]
-      );
-      if (dup.rows.length) {
-        return res.status(400).send("El nombre de usuario o correo ya están registrados.");
-      }
+    // Asociación a inmobiliaria
+    const belongs = belongsToAgency === 'true';
+    const agencyId = belongs ? agency : null;
 
-      // Carpeta de usuario
-      const userFolder = path.join(__dirname, 'public', 'uploads', 'usuarios', userUuid);
-      if (!fs.existsSync(userFolder)) fs.mkdirSync(userFolder, { recursive: true });
-
-      // Procesar archivos
-      let profilePic = null, idFront = null, idBack = null;
-      if (req.files.profilePic) {
-        const f = req.files.profilePic[0];
-        fs.renameSync(f.path, path.join(userFolder, f.originalname));
-        profilePic = `/uploads/usuarios/${userUuid}/${f.originalname}`;
-      }
-      if (req.files.idFront) {
-        const f = req.files.idFront[0];
-        fs.renameSync(f.path, path.join(userFolder, f.originalname));
-        idFront = `/uploads/usuarios/${userUuid}/${f.originalname}`;
-      }
-      if (req.files.idBack) {
-        const f = req.files.idBack[0];
-        fs.renameSync(f.path, path.join(userFolder, f.originalname));
-        idBack = `/uploads/usuarios/${userUuid}/${f.originalname}`;
-      }
-
-      // Encriptar contraseña
-      const hashed = await bcrypt.hash(password, saltRounds);
-
-      // Insertar usuario y devolver toda la fila
-      const insertRes = await pool.query(
-        `INSERT INTO users
-          (username, email, password,
-           profile_pic, dept, city, address, phone,
-           id_front, id_back,
-           belongs_to_agency, agency_id,
-           uuid)
-         VALUES
-          ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
-         RETURNING *`,
-        [
-          username, email, hashed,
-          profilePic, dept, city, address, phone,
-          idFront, idBack,
-          (belongsToAgency === 'si'),
-          (belongsToAgency === 'si' ? agency : null),
-          userUuid
-        ]
-      );
-
-      // Guardar en sesión para login automático
-      const newUser = insertRes.rows[0];
-      delete newUser.password;   // opcional: no almacenar el hash en sesión
-      req.session.user = newUser;
-
-      // Si vienen redirectToAgency, lo mandamos a registrar inmobiliaria
-      if (redirectToAgency === 'true') {
-        return res.redirect('/agencias/registro');
-      }
-
-      // En otro caso, al dashboard directamente
-      res.redirect('/dashboard');
-    } catch (err) {
-      console.error('Error en registro:', err);
-      res.status(500).send('Error al crear la cuenta.');
+    // Obtener datos actuales del usuario
+    const userResult = await pool.query(
+      'SELECT uuid, profile_pic, id_front, id_back FROM users WHERE id = $1',
+      [userId]
+    );
+    if (userResult.rows.length === 0) {
+      return res.status(404).send('Usuario no encontrado.');
     }
+
+    const { uuid: userUuid, profile_pic: currentPic, id_front: currentFront, id_back: currentBack } = userResult.rows[0];
+    const userFolder = path.join(__dirname, 'public', 'uploads', 'usuarios', userUuid);
+    if (!fs.existsSync(userFolder)) fs.mkdirSync(userFolder, { recursive: true });
+
+    const updateData = { profile_pic: null, id_front: null, id_back: null };
+
+    // Función helper para procesar imagen
+    async function processImage(file, currentKey) {
+      // Eliminar anterior
+      const oldUrl = userResult.rows[0][currentKey];
+      if (oldUrl) {
+        const oldPath = path.join(__dirname, 'public', oldUrl);
+        if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+      }
+
+      const tempPath = file.path;
+      const original = file.originalname;
+      const ext = path.extname(original).toLowerCase();
+      let finalName;
+
+      if (ext === '.heic' || ext === '.heif') {
+        finalName = original.replace(/\.(heic|heif)$/i, '.jpg');
+        const convertedPath = path.join(userFolder, finalName);
+        try {
+          const inputBuffer = await fs.promises.readFile(tempPath);
+          const outputBuffer = await heicConvert({
+            buffer: inputBuffer,
+            format: 'JPEG',
+            quality: 1
+          });
+          await fs.promises.writeFile(convertedPath, outputBuffer);
+          fs.unlinkSync(tempPath);
+        } catch (err) {
+          console.error('❌ Error conversión HEIC:', err);
+          finalName = original;
+          fs.renameSync(tempPath, path.join(userFolder, finalName));
+        }
+      } else {
+        finalName = original;
+        fs.renameSync(tempPath, path.join(userFolder, finalName));
+      }
+
+      return `/uploads/usuarios/${userUuid}/${finalName}`;
+    }
+
+    // Procesar archivos si existen
+    if (req.files.profilePic) {
+      updateData.profile_pic = await processImage(req.files.profilePic[0], 'profile_pic');
+    }
+    if (req.files.idFront) {
+      updateData.id_front = await processImage(req.files.idFront[0], 'id_front');
+    }
+    if (req.files.idBack) {
+      updateData.id_back = await processImage(req.files.idBack[0], 'id_back');
+    }
+
+    // Construir actualización SQL
+    const fields = [username, email, phone, address, city, dept];
+    const queryParts = [
+      'username = $1',
+      'email = $2',
+      'phone = $3',
+      'address = $4',
+      'city = $5',
+      'dept = $6'
+    ];
+    let idx = 7;
+
+    if (updateData.profile_pic) {
+      fields.push(updateData.profile_pic);
+      queryParts.push(`profile_pic = $${idx++}`);
+    }
+    if (updateData.id_front) {
+      fields.push(updateData.id_front);
+      queryParts.push(`id_front = $${idx++}`);
+    }
+    if (updateData.id_back) {
+      fields.push(updateData.id_back);
+      queryParts.push(`id_back = $${idx++}`);
+    }
+
+    fields.push(belongs, agencyId);
+    queryParts.push(`belongs_to_agency = $${idx++}`, `agency_id = $${idx++}`);
+
+    fields.push(userId);
+    const sql = `UPDATE users SET ${queryParts.join(', ')} WHERE id = $${idx}`;
+
+    await pool.query(sql, fields);
+
+    // Actualizar sesión
+    const updated = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
+    req.session.user = updated.rows[0];
+
+    res.redirect('/dashboard');
+  } catch (err) {
+    console.error('Error al actualizar perfil:', err);
+    res.status(500).send('Error al actualizar el perfil.');
   }
-);
+});
+
 
 app.get('/check-username', async (req, res) => {
   const { username } = req.query;
@@ -1271,7 +1665,9 @@ app.get('/dashboard/profile', isAuthenticated, async (req, res) => {
   }
 });
 
+
 // Endpoint para actualizar perfil de usuario
+
 app.post('/dashboard/profile', isAuthenticated, upload.fields([
   { name: 'profilePic', maxCount: 1 },
   { name: 'idFront', maxCount: 1 },
@@ -1307,17 +1703,49 @@ app.post('/dashboard/profile', isAuthenticated, upload.fields([
 
     const updateData = { profile_pic: null, id_front: null, id_back: null };
 
-    // Procesar nuevos archivos si existen
+    // Procesar nueva foto de perfil y convertir HEIC/HEIF a JPEG si es necesario
     if (req.files['profilePic']) {
+      // Eliminar foto anterior
       if (currentPic) {
         const oldPath = path.join(__dirname, 'public', currentPic);
         if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
       }
+
       const file = req.files['profilePic'][0];
-      const newPath = path.join(userFolder, file.originalname);
-      fs.renameSync(file.path, newPath);
-      updateData.profile_pic = `/uploads/usuarios/${userUuid}/${file.originalname}`;
+      const tempPath = file.path;
+      const ext = path.extname(file.originalname).toLowerCase();
+      let finalFilename;
+
+      if (ext === '.heic' || ext === '.heif') {
+        finalFilename = file.originalname.replace(/\.(heic|heif)$/i, '.jpg');
+        const convertedPath = path.join(userFolder, finalFilename);
+        try {
+          // Conversión HEIC a JPEG con heic-convert
+          const inputBuffer = await fs.promises.readFile(tempPath);
+          const outputBuffer = await heicConvert({
+            buffer: inputBuffer,
+            format: 'JPEG',
+            quality: 1
+          });
+          await fs.promises.writeFile(convertedPath, outputBuffer);
+          fs.unlinkSync(tempPath);
+        } catch (err) {
+          console.error('Error converting HEIC with heic-convert:', err);
+          // Si falla conversión, mover original
+          finalFilename = file.originalname;
+          fs.renameSync(tempPath, path.join(userFolder, finalFilename));
+        }
+      } else {
+        // Para otros formatos se renombra directamente
+        finalFilename = file.originalname;
+        const newPath = path.join(userFolder, finalFilename);
+        fs.renameSync(tempPath, newPath);
+      }
+
+      updateData.profile_pic = `/uploads/usuarios/${userUuid}/${finalFilename}`;
     }
+
+    // Procesar documentos de identidad (sin cambios)
     if (req.files['idFront']) {
       if (currentFront) fs.unlinkSync(path.join(__dirname, 'public', currentFront));
       const file = req.files['idFront'][0];
@@ -1368,9 +1796,10 @@ app.post('/dashboard/profile', isAuthenticated, upload.fields([
 
     // Asociación a inmobiliaria
     fields.push(belongs, agencyId);
-    queryParts.push(`belongs_to_agency = $${paramIndex++}`, `agency_id = $${paramIndex++}`);
+    queryParts.push(`belongs_to_agency = $${paramIndex++}`);
+    queryParts.push(`agency_id = $${paramIndex++}`);
 
-    // WHERE
+    // WHERE id
     fields.push(userId);
     const updateQuery = `UPDATE users SET ${queryParts.join(', ')} WHERE id = $${paramIndex}`;
 
@@ -1387,6 +1816,10 @@ app.post('/dashboard/profile', isAuthenticated, upload.fields([
     res.status(500).send('Error al actualizar el perfil.');
   }
 });
+
+
+
+
 
 
 // GET /inmobiliaria/:id — Detalle de la agencia y sus propiedades
@@ -1506,43 +1939,47 @@ app.get('/logout', (req, res) => {
 // Listado de propiedades con paginación y ordenamiento
 const format = require('pg-format'); // Asegúrate de instalar esto con: npm install pg-format
 
-// Mostrar listado de propiedades del usuario y manejar el pop-up de “bajo revisión”
+// GET /properties — Mostrar listado de propiedades del usuario con slug en las URLs y pop-up “En revisión”
 app.get('/properties', isAuthenticated, async (req, res) => {
   const userId = req.session.user.id;
-  const page   = parseInt(req.query.page)      || 1;
-  const limit  = parseInt(req.query.limit)     || 9;
+  const page   = parseInt(req.query.page)  || 1;
+  const limit  = parseInt(req.query.limit) || 9;
   const offset = (page - 1) * limit;
 
   // Validar campos de orden
   const allowedFields = ['id', 'titulo', 'precio', 'created_at'];
   const allowedOrders = ['ASC', 'DESC'];
-  const sortField     = allowedFields.includes(req.query.sortField) 
-                        ? req.query.sortField 
-                        : 'id';
-  const sortOrder     = allowedOrders.includes(req.query.sortOrder?.toUpperCase()) 
-                        ? req.query.sortOrder.toUpperCase() 
-                        : 'ASC';
+  const sortField = allowedFields.includes(req.query.sortField)
+    ? req.query.sortField
+    : 'id';
+  const sortOrder = allowedOrders.includes(req.query.sortOrder?.toUpperCase())
+    ? req.query.sortOrder.toUpperCase()
+    : 'ASC';
 
   try {
-    // Contar total de propiedades del usuario
+    // 1) Contar total de propiedades
     const countResult = await pool.query(
       'SELECT COUNT(*) FROM propiedades WHERE user_id = $1',
       [userId]
     );
     const total = parseInt(countResult.rows[0].count, 10);
 
-    // Traer propiedades paginadas y ordenadas
-    const query = format(
-      'SELECT * FROM propiedades WHERE user_id = %L ORDER BY %I %s LIMIT %L OFFSET %L',
+    // 2) Traer propiedades con slug
+    const sql = format(
+      'SELECT id, titulo, slug, imagenes_urls, operacion, precio, visitas, clicks_telefono, clicks_email, clicks_whatsapp, estado '
+      + 'FROM propiedades '
+      + 'WHERE user_id = %L '
+      + 'ORDER BY %I %s '
+      + 'LIMIT %L OFFSET %L',
       userId, sortField, sortOrder, limit, offset
     );
-    const result = await pool.query(query);
+    const result = await pool.query(sql);
     const propiedades = result.rows;
 
-    // Leer parámetro submitted para disparar el modal de “en revisión”
+    // 3) Mostrar modal de “en revisión” si corresponde
     const submitted = req.query.submitted === 'true';
 
-    // Renderizar la vista pasándole el flag `submitted`
+    // 4) Renderizar EJS
     res.render('properties', {
       propiedades,
       page,
@@ -1603,6 +2040,11 @@ app.use('/properties/new', (req, _res, next) => {
 // --- 3) POST /properties/new usando ONLY propertyUpload ---
 // POST /properties/new — Crear nueva propiedad (solo para propiedades)
 // POST /properties/new — Crear nueva propiedad (solo para propiedades)
+// POST /properties/new — Crear nueva propiedad (solo para propiedades)
+// Agrega al inicio de tu server.js si aún no existe:
+// POST /properties/new — Crear nueva propiedad con soporte HEIC en imágenes
+// Agrega al inicio de tu server.js si aún no existe:
+// POST /properties/new — Crear nueva propiedad con soporte HEIC en imágenes
 app.post(
   '/properties/new',
   isAuthenticated,
@@ -1613,79 +2055,78 @@ app.post(
   ]),
   async (req, res) => {
     try {
-      // 0) Multer te dejó el UUID en req.uploadFolderUuid
       const uuid   = req.uploadFolderUuid;
       const userId = req.session.user.id;
 
-      // 1) Extraer campos del body
+      // Campos del body
       const {
-        titulo,
-        tipo_propiedad,
-        departamento,
-        municipio,
-        zona,
-        operacion,
-        precio,
-        habitaciones,
-        banos,
-        descripcion,
-        m2_construccion,
-        m2_terreno,
-        tamano_terreno,
-        metros_frente
+        titulo, tipo_propiedad, departamento, municipio, zona,
+        operacion, precio, habitaciones, banos, descripcion,
+        m2_construccion, m2_terreno, tamano_terreno, metros_frente
       } = req.body;
-
-      // 2) Flag de lujo
       const luxuryFlag = Boolean(req.body.luxo);
 
-      // 3) Normalizar arrays de características
+      // Normalizar arrays de características
       const caracteristicas = Array.isArray(req.body.caracteristicas)
         ? req.body.caracteristicas
-        : req.body.caracteristicas
-          ? [req.body.caracteristicas]
-          : [];
+        : req.body.caracteristicas ? [req.body.caracteristicas] : [];
       const luxury_features = Array.isArray(req.body.luxury_features)
         ? req.body.luxury_features
-        : req.body.luxury_features
-          ? [req.body.luxury_features]
-          : [];
+        : req.body.luxury_features ? [req.body.luxury_features] : [];
       const caracteristicas_terreno = Array.isArray(req.body.caracteristicas_terreno)
         ? req.body.caracteristicas_terreno
-        : req.body.caracteristicas_terreno
-          ? [req.body.caracteristicas_terreno]
-          : [];
+        : req.body.caracteristicas_terreno ? [req.body.caracteristicas_terreno] : [];
       const caracteristicas_bodega = Array.isArray(req.body.caracteristicas_bodega)
         ? req.body.caracteristicas_bodega
-        : req.body.caracteristicas_bodega
-          ? [req.body.caracteristicas_bodega]
-          : [];
+        : req.body.caracteristicas_bodega ? [req.body.caracteristicas_bodega] : [];
       const caracteristicas_local = Array.isArray(req.body.caracteristicas_local)
         ? req.body.caracteristicas_local
-        : req.body.caracteristicas_local
-          ? [req.body.caracteristicas_local]
-          : [];
+        : req.body.caracteristicas_local ? [req.body.caracteristicas_local] : [];
 
-      // 4) Convertir precio a número
-      const rawPrecio     = precio.toString().trim().replace(/^Q\s*/i, '').replace(/,/g, '');
-      const precioNumeric = parseFloat(rawPrecio);
+      // Validar precio
+      const precioNumeric = parseFloat(precio.toString().trim().replace(/^Q\s*/i, '').replace(/,/g, ''));
       if (isNaN(precioNumeric)) throw new Error('Precio inválido');
 
-      // 5a) Reordenar las imágenes según el orden enviado desde el formulario
+      // 5a) Orden y archivos subidos
       let imagenFiles = req.files['imagenes'] || [];
-      const order = req.body.imageOrder; // debe ser un array de filenames en el orden deseado
+      const order = req.body.imageOrder;
       if (order) {
-        const orderedNames = Array.isArray(order) ? order : [order];
-        imagenFiles = orderedNames
+        const ordered = Array.isArray(order) ? order : [order];
+        imagenFiles = ordered
           .map(name => imagenFiles.find(f => f.filename === name))
           .filter(f => f);
       }
 
-      // 5b) Construir URLs de las imágenes en el orden correcto
+      // 5b) Convertir HEIC/HEIF a JPEG en servidor
+      for (const file of imagenFiles) {
+        const ext = path.extname(file.filename).toLowerCase();
+        if (ext === '.heic' || ext === '.heif') {
+          const tempPath = file.path;
+          const newName  = file.filename.replace(/\.(heic|heif)$/i, '.jpg');
+          const newPath  = path.join(path.dirname(tempPath), newName);
+          try {
+            const inputBuffer  = await fs.promises.readFile(tempPath);
+            const outputBuffer = await heicConvert({
+              buffer: inputBuffer,
+              format: 'JPEG',
+              quality: 1
+            });
+            await fs.promises.writeFile(newPath, outputBuffer);
+            await fs.promises.unlink(tempPath);
+            file.filename = newName;
+            file.path     = newPath;
+          } catch (err) {
+            console.error('Error converting HEIC image:', err);
+          }
+        }
+      }
+
+      // 5c) Construir URLs de imágenes
       const imagenes_urls = imagenFiles.map(f =>
         `/uploads/propiedades/${uuid}/${f.filename}`
       );
 
-      // 6) Procesar video y plano (igual que antes)
+      // 6) Procesar video y plano
       const video_url = req.files['video']
         ? `/uploads/propiedades/${uuid}/${req.files['video'][0].filename}`
         : null;
@@ -1693,8 +2134,8 @@ app.post(
         ? `/uploads/propiedades/${uuid}/${req.files['plano'][0].filename}`
         : null;
 
-      // 7) Insertar en la base de datos
-      await pool.query(
+      // 7) Insertar en la base de datos y obtener el nuevo ID
+      const insertRes = await pool.query(
         `INSERT INTO propiedades (
            titulo, tipo_propiedad, departamento, municipio, zona,
            operacion, precio, habitaciones, banos, descripcion,
@@ -1712,7 +2153,8 @@ app.post(
            $19,$20,$21,$22,
            $23,$24,$25,$26,
            $27,$28,$29,$30,'pendiente'
-         )`,
+         )
+         RETURNING id`,
         [
           titulo, tipo_propiedad, departamento, municipio, zona,
           operacion, precioNumeric,
@@ -1745,9 +2187,18 @@ app.post(
           uuid
         ]
       );
+      const newId = insertRes.rows[0].id;
 
-      // ——— ENVÍO DE EMAIL A ADMINS ———
-      // 8) Obtener todos los admins
+      // 8) Generar slug
+      const rawSlug = titulo
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .trim().toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+      const finalSlug = `${rawSlug}-${newId}`;
+      await pool.query('UPDATE propiedades SET slug = $1 WHERE id = $2', [finalSlug, newId]);
+
+      // Notificar admins y redirigir
       const adminsRes = await pool.query(
         `SELECT email FROM users WHERE rol = 'admin' AND email IS NOT NULL`
       );
@@ -1757,15 +2208,11 @@ app.post(
           from: "Inmo360 <no-reply@inmo360.com>",
           to: adminEmails,
           subject: 'Nueva propiedad pendiente de revisión',
-          text: `El usuario ${req.session.user.username} ha subido una nueva propiedad titulada "${titulo}".\n` +
-                `Revisa en el panel de administración: https://tu-dominio.com/admin/properties`
+          text: `El usuario ${req.session.user.username} ha subido una nueva propiedad titulada "${titulo}".`
         });
       }
-      // ————————————————————————
 
-      // 9) Redirigir con confirmación
       res.redirect('/properties?submitted=true');
-
     } catch (err) {
       console.error('Error al crear propiedad:', err);
       res.status(500).send('Error al crear la propiedad.');
@@ -1905,9 +2352,12 @@ app.post('/properties/delete/:id', isAuthenticated, async (req, res) => {
 
 
 // Ruta para mostrar detalle de una propiedad
-app.get('/properties/:id', async (req, res) => {
-  const { id } = req.params;
+// Ruta para mostrar detalle de una propiedad por slug
+app.get('/properties/:slug', async (req, res) => {
+  const { slug } = req.params;    // e.g. "mi-casa-bonita-42"
+
   try {
+    // 1) Buscar la propiedad directamente por slug
     const result = await pool.query(`
       SELECT 
         p.*,
@@ -1917,6 +2367,8 @@ app.get('/properties/:id', async (req, res) => {
         u.phone               AS user_phone,
         u.dept                AS user_dept,
         u.city                AS user_city,
+        p.user_id,
+        p.slug,
         u.belongs_to_agency,
         u.agency_id,
         ag.name               AS agency_name
@@ -1925,46 +2377,47 @@ app.get('/properties/:id', async (req, res) => {
         ON p.user_id = u.id
       LEFT JOIN inmobiliarias ag
         ON u.agency_id = ag.id
-      WHERE p.id = $1
-    `, [id]);
+      WHERE p.slug = $1
+    `, [slug]);
 
-    if (result.rows.length === 0) {
+    // 2) Si no existe, devolvemos 404
+    if (result.rowCount === 0) {
       return res.status(404).send('Propiedad no encontrada');
     }
-
     const property = result.rows[0];
 
-    // 🔒 Prevenir visitas múltiples del mismo visitante por sesión
+    // 3) Control de visitas en sesión (solo si no es el dueño)
     if (!req.session.viewedProperties) {
       req.session.viewedProperties = [];
     }
-    const currentUserId = req.session?.user?.id || null;
-    const isOwner = currentUserId && currentUserId === property.user_id;
-    const alreadyViewed = req.session.viewedProperties.includes(id);
-    if (!isOwner && !alreadyViewed) {
+    const currentUserId = req.session.user?.id || null;
+    const isOwner = currentUserId === property.user_id;
+    if (!isOwner && !req.session.viewedProperties.includes(property.id)) {
       await pool.query(
         'UPDATE propiedades SET visitas = visitas + 1 WHERE id = $1',
-        [id]
+        [property.id]
       );
-      req.session.viewedProperties.push(id);
+      req.session.viewedProperties.push(property.id);
     }
 
-    // Parsear JSON de imágenes
+    // 4) Parsear JSON de imágenes y eliminar duplicados
     let images = [];
     if (property.imagenes_urls) {
       if (typeof property.imagenes_urls === 'string') {
         try {
           images = JSON.parse(property.imagenes_urls);
-        } catch {}
+        } catch (err) { /* ignora JSON inválido */ }
       } else if (Array.isArray(property.imagenes_urls)) {
         images = property.imagenes_urls;
       }
     }
+    images = images.filter((url, i, a) => a.indexOf(url) === i);
 
+    // 5) Video y plano
     const videoUrl = property.video_url || null;
     const planoUrl = property.plano_url || null;
 
-    // Construir objeto agent con los campos correctos
+    // 6) Construir objeto del agente
     const agent = {
       profile_pic:     property.user_profile_pic,
       name:            property.user_name,
@@ -1972,14 +2425,11 @@ app.get('/properties/:id', async (req, res) => {
       phone:           property.user_phone,
       dept:            property.user_dept,
       city:            property.user_city,
-      belongsToAgency: property.belongs_to_agency,  // mapear snake_case a camelCase
-      agency:          property.agency_name         // traer el nombre de la agencia
+      belongsToAgency: property.belongs_to_agency,
+      agency:          property.agency_name
     };
 
-    images = Array.isArray(images)
-  ? images.filter((url, idx, self) => self.indexOf(url) === idx)
-  : [];
-
+    // 7) Renderizar la vista con todos los datos
     res.render('propertyDetail', {
       property,
       images,
@@ -1987,6 +2437,7 @@ app.get('/properties/:id', async (req, res) => {
       videoUrl,
       planoUrl
     });
+
   } catch (err) {
     console.error('Error al cargar detalle de la propiedad:', err);
     res.status(500).send('Error al cargar detalle de la propiedad');

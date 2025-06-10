@@ -1,0 +1,118 @@
+<%- include('partials/header') %>
+<head>
+  <link rel="stylesheet" href="/css/searchAgencies.css">
+  <link rel="stylesheet" href="/css/header.css">
+</head>
+
+<section class="agencies-hero">
+  <div class="agencies-hero__overlay"></div>
+  <div class="agencies-hero__content">
+    <h2>Encuentra una inmobiliaria</h2>
+    <p>Filtra por departamento y municipio</p>
+    <form class="agencies-search-panel" action="/search-agencies" method="POST">
+      <div class="form-group">
+        <select name="departamento" id="departamento" required>
+          <option value="">Departamento</option>
+          <% departamentos.forEach(dep => { %>
+            <option 
+              value="<%= dep.nombre %>" 
+              <%= query.departamento === dep.nombre ? 'selected' : '' %>>
+              <%= dep.nombre %>
+            </option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="form-group">
+        <!-- Aquí ya no es obligatorio -->
+        <select name="municipio" id="municipio">
+          <% if (query.municipio) { %>
+            <!-- Si ya hay municipio seleccionado, lo insertamos como opción -->
+            <option value="<%= query.municipio %>" selected><%= query.municipio %></option>
+          <% } else { %>
+            <option value="">Municipio</option>
+          <% } %>
+        </select>
+      </div>
+      <button type="submit" class="btn-search">Buscar</button>
+    </form>
+  </div>
+</section>
+
+<section class="agencies-results">
+  <div class="container">
+    <% if (results.length > 0) { %>
+      <h3><%= results.length %> Inmobiliaria<%= results.length !== 1 ? 's' : '' %> encontrada<%= results.length !== 1 ? 's' : '' %></h3>
+      <div class="results-grid">
+        <% results.forEach(agency => { %>
+          <div class="agency-card">
+            <div class="agency-card__logo">
+              <% if (agency.logo_url) { %>
+                <img src="<%= agency.logo_url %>" alt="Logo <%= agency.name %>">
+              <% } else { %>
+                <div class="logo-placeholder">No Logo</div>
+              <% } %>
+            </div>
+            <div class="agency-card__info">
+              <h4 class="agency-name"><%= agency.name %></h4>
+              <p class="agency-location"><%= agency.municipio %><%= agency.municipio && agency.departamento ? ', ' : '' %><%= agency.departamento %></p>
+              <p class = "agency-contact">📞 <%= agency.phone %></p>
+              <p class = "agency-contact">✉️ <%= agency.email %></p>
+              <a 
+                href="/buscar-inmobiliaria/<%= encodeURIComponent(agency.name) %>" 
+                class="agency-visit-btn"
+              >
+                Ver Detalles
+              </a>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+    <% } else if (typeof results !== 'undefined') { %>
+      <p class="no-results">No se encontraron inmobiliarias para los filtros seleccionados.</p>
+    <% } %>
+  </div>
+</section>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const deptSelect = document.getElementById('departamento');
+    const munSelect  = document.getElementById('municipio');
+
+    // Función para cargar municipios vía AJAX
+    async function loadMunicipios(departamento, preselectMunicipio = '') {
+      munSelect.innerHTML = '<option value="">Cargando...</option>';
+      try {
+        const res = await fetch(`/municipios?departamento=${encodeURIComponent(departamento)}`);
+        const list = await res.json();
+        munSelect.innerHTML = '<option value="">Municipio</option>';
+        list.forEach(item => {
+          const name = item.nombre || item;
+          const opt = document.createElement('option');
+          opt.value = name;
+          opt.text  = name;
+          if (name === preselectMunicipio) opt.selected = true;
+          munSelect.appendChild(opt);
+        });
+      } catch (err) {
+        console.error('Error cargando municipios:', err);
+        munSelect.innerHTML = '<option value="">Error al cargar</option>';
+      }
+    }
+
+    deptSelect.addEventListener('change', () => {
+      const selDept = deptSelect.value;
+      if (!selDept) {
+        munSelect.innerHTML = '<option value="">Municipio</option>';
+        return;
+      }
+      loadMunicipios(selDept);
+    });
+
+    // Si al entrar ya hay un departamento (y opcionalmente municipio), lo cargamos y preseleccionamos
+    <% if (query.departamento) { %>
+      loadMunicipios('<%= query.departamento %>', '<%= query.municipio || '' %>');
+    <% } %>
+  });
+</script>
+
+<%- include('partials/footer') %>

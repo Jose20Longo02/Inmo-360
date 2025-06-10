@@ -347,7 +347,7 @@
                 <% } else if (prop.tipo_propiedad === 'local comercial') { %>
                   <% if (prop.local_tamano) { %>
                     <div class="characteristic-item">
-                      <img src="/images/icons/local-icon.png"><span><%= prop.local_tamano %> m²</span>
+                      <img src="/images/icons/tamaño-icon.png"><span><%= prop.local_tamano %> m²</span>
                     </div>
                   <% } %>
                 <% } %>
@@ -377,7 +377,9 @@
                     class="heart-icon">
                 </button>
               <% } %>
-              <a href="/properties/<%= prop.id %>" class="btn-view-more <%= prop.luxo ? 'luxury-button' : '' %>">Ver más</a>
+              <a href="/properties/<%= prop.slug %>" class="btn-view-more <%= prop.luxo ? 'luxury-button' : '' %>">
+                Ver más
+              </a>
             </div>
           </div>
         </article>

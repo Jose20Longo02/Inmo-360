@@ -78,7 +78,7 @@
               const isBodega = prop.tipo_propiedad === 'bodega';
               const isLocal = prop.tipo_propiedad === 'local comercial';
           %>
-          <a href="/properties/<%= prop.id %>" class="property-card" style="background-image: url('<%= imageSrc %>')">
+          <a href="/properties/<%= prop.slug %>" class="property-card" style="background-image: url('<%= imageSrc %>')">
             <span class="property-badge"><%= prop.operacion === 'renta' ? 'Renta' : 'Venta' %></span>
             <div class="property-overlay">
               <h3 class="property-title"><%= prop.titulo %></h3>
@@ -110,7 +110,7 @@
                   <% } %>
                   <% if (prop.bodega_altura) { %>
                     <div class="characteristic-item">
-                      <img src="/images/icons/altura-icon.png" alt="Altura" width="16">
+                      <img src="/images/icons/altura-icon-w.png" alt="Altura" width="16">
                       <span><%= prop.bodega_altura %> m</span>
                     </div>
                   <% } %>
@@ -153,21 +153,34 @@
     <h2>Hecho para usted</h2>
     <p>Descubre cómo nuestra plataforma puede ayudarte en cada paso.</p>
     <div class="features__list">
-      <div class="feature-item">
-        <div class="feature-icon"><img src="/images/icons/encontrar-icon.png" alt="Buscar propiedad" width="25" height="25"></div>
+
+      <!-- 1. Busque una propiedad -->
+      <a href="/" class="feature-item">
+        <div class="feature-icon">
+          <img src="/images/icons/encontrar-icon.png" alt="Buscar propiedad" width="25" height="25">
+        </div>
         <h4>Busque una propiedad</h4>
         <p>Encuentre lo que necesita en unos clicks.</p>
-      </div>
-      <div class="feature-item">
-        <div class="feature-icon"><img src="/images/icons/publicar-icon.png" alt="Publicar propiedad" width="25" height="25"></div>
+      </a>
+
+      <!-- 2. Publique una propiedad -->
+      <a href="<%= session && session.user ? '/properties/new' : '/login' %>" class="feature-item">
+        <div class="feature-icon">
+          <img src="/images/icons/publicar-icon.png" alt="Publicar propiedad" width="25" height="25">
+        </div>
         <h4>Publique una propiedad</h4>
         <p>Venda su propiedad rápidamente.</p>
-      </div>
-      <div class="feature-item">
-        <div class="feature-icon"><img src="/images/icons/encontrar-inmobiliaria-icon.png" alt="Encontrar inmobiliaria" width="25" height="25"></div>
+      </a>
+
+      <!-- 3. Encuentre una inmobiliaria -->
+      <a href="/search-agencies" class="feature-item">
+        <div class="feature-icon">
+          <img src="/images/icons/encontrar-inmobiliaria-icon.png" alt="Encontrar inmobiliaria" width="25" height="25">
+        </div>
         <h4>Encuentre una inmobiliaria</h4>
         <p>Venda 5 veces más rápido con profesionales.</p>
-      </div>
+      </a>
+
     </div>
   </div>
 </section>

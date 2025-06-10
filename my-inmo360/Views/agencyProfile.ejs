@@ -1,0 +1,104 @@
+<%- include('partials/header') %>
+<head>
+  <link rel="stylesheet" href="/css/agencyProfile.css">
+  <link rel="stylesheet" href="/css/header.css">
+</head>
+
+<section class="agency-detail-hero">
+  <div class="container">
+    <div class="hero-content">
+      <div class="logo-wrapper">
+        <% if (agency.logo_url) { %>
+          <img src="<%= agency.logo_url %>" alt="Logo <%= agency.name %>">
+        <% } else { %>
+          <div class="logo-placeholder-large">No Logo</div>
+        <% } %>
+      </div>
+      <h2 class="agency-name-hero"><%= agency.name %></h2>
+    </div>
+  </div>
+</section>
+
+<div class="agency-detail-main container">
+  <!-- COLUMNA IZQUIERDA: LISTADO DE PROPIEDADES -->
+  <div class="properties-section">
+    <h3>Propiedades Publicadas (<%= totalProps %>)</h3>
+    <% if (propiedades.length > 0) { %>
+      <div class="properties-grid">
+        <% propiedades.forEach(prop => { 
+             let imageSrc = '/images/placeholder.jpg';
+             if (Array.isArray(prop.imagenes_urls) && prop.imagenes_urls.length) {
+               imageSrc = prop.imagenes_urls[0];
+             } else if (typeof prop.imagenes_urls === 'string') {
+               try {
+                 const arr = JSON.parse(prop.imagenes_urls);
+                 if (Array.isArray(arr) && arr.length) imageSrc = arr[0];
+               } catch(e){}
+             }
+             const precioNum = parseFloat(prop.precio);
+             const formattedPrice = isNaN(precioNum)
+               ? prop.precio
+               : 'Q' + precioNum.toLocaleString('en-US', {
+                   minimumFractionDigits: 2,
+                   maximumFractionDigits: 2
+                 });
+        %>
+        <a href="/properties/<%= prop.slug %>" class="property-card">
+          <div class="card-image">
+            <img src="<%= imageSrc %>" alt="Propiedad <%= prop.titulo %>">
+          </div>
+          <div class="card-content">
+            <h4 class="property-title"><%= prop.titulo %></h4>
+            <p class="property-location"><%= prop.zona %>, <%= prop.municipio %></p>
+            <p class="property-price"><%= formattedPrice %></p>
+          </div>
+        </a>
+        <% }); %>
+      </div>
+
+      <!-- PAGINACIÓN -->
+      <% if (totalPages > 1) { %>
+        <div class="pagination-container">
+          <% if (currentPage > 1) { %>
+            <a href="?page=<%= currentPage - 1 %>" class="page-btn">« Anterior</a>
+          <% } %>
+
+          <% for (let i = 1; i <= totalPages; i++) { %>
+            <a href="?page=<%= i %>" class="page-number <%= i === currentPage ? 'active' : '' %>"><%= i %></a>
+          <% } %>
+
+          <% if (currentPage < totalPages) { %>
+            <a href="?page=<%= currentPage + 1 %>" class="page-btn">Siguiente »</a>
+          <% } %>
+        </div>
+      <% } %>
+    <% } else { %>
+      <p class="no-properties">Esta inmobiliaria aún no tiene propiedades publicadas.</p>
+    <% } %>
+  </div>
+
+  <!-- COLUMNA DERECHA: LISTA DE AGENTES -->
+  <aside class="agents-sidebar">
+    <h3>Agentes</h3>
+    <% if (agents.length > 0) { %>
+      <ul class="agents-list">
+        <% agents.forEach(agent => { %>
+          <li class="agent-item">
+            <div class="agent-photo">
+              <% if (agent.profile_pic) { %>
+                <img src="<%= agent.profile_pic %>" alt="<%= agent.username %>">
+              <% } else { %>
+                <div class="agent-placeholder">👤</div>
+              <% } %>
+            </div>
+            <span class="agent-name"><%= agent.username %></span>
+          </li>
+        <% }); %>
+      </ul>
+    <% } else { %>
+      <p class="no-agents">No hay agentes registrados en esta inmobiliaria.</p>
+    <% } %>
+  </aside>
+</div>
+
+<%- include('partials/footer') %>

@@ -24,7 +24,10 @@
       <div class="cta-and-login">
         <% if (session.user) { %>
           <!-- Para usuarios logueados en desktop -->
-          <a href="/properties/new" class="cta-button">Publicar una propiedad</a>
+          <a href="/properties/new" class="cta-button">
+             <img src="/images/icons/goal-icon-black.png" alt="Icono de publicar" class="icon">
+            Publicar una propiedad
+          </a>
 
           <!-- Botón de notificaciones -->
           <div id="notif-container" class="notif-container">
@@ -46,8 +49,14 @@
           </div>
         <% } else { %>
           <!-- Para usuarios no logueados -->
-          <a href="/publicar" class="cta-button">Anuncia tu propiedad gratis</a>
-          <a href="/login" class="login-link">Iniciar Sesión</a>
+          <a href="/publicar" class="cta-button">
+            <img src="/images/icons/goal-icon-black.png" alt="Icono de publicar" class="icon">
+            Anuncia tu propiedad gratis
+          </a>
+          <a href="/login" class="login-link">
+             <img src="/images/icons/user-icon-white.png" alt="Icono de publicar" class="icon">
+            Iniciar Sesión
+          </a>
         <% } %>
       </div>
     </div>
@@ -63,7 +72,10 @@
       </div>
       <div class="mobile-right">
         <% if (session.user) { %>
-          <a href="/properties/new" class="cta-button">Publicar</a>
+          <a href="/properties/new" class="cta-button">
+            <img src="/images/icons/goal-icon-black.png" alt="Icono de publicar" class="icon">
+            Publicar propiedad
+          </a>
           <!-- Notificaciones en mobile -->
           <div id="notif-container-mobile" class="notif-container">
             <button id="notif-button-mobile" class="notif-button" aria-label="Notificaciones">
@@ -73,7 +85,10 @@
             <ul id="notif-dropdown-mobile" class="notif-dropdown hidden"></ul>
           </div>
         <% } else { %>
-          <a href="/publicar" class="cta-button">Anuncia</a>
+          <a href="/publicar" class="cta-button">
+            <img src="/images/icons/goal-icon-black.png" alt="Icono de publicar" class="icon">
+            Anuncia una propiedad
+          </a>
         <% } %>
       </div>
     </div>

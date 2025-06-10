@@ -1,0 +1,171 @@
+/* ============================= */
+/*     STATS PROPERTIES CSS      */
+/* ============================= */
+
+/* ---------- RESET Y BASE ---------- */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+body {
+  background-color: #f2f2f2;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: #222;
+}
+
+/* ---------- BANNER PRINCIPAL ---------- */
+.stats-banner {
+  background-color: #002244;        /* Azul muy oscuro */
+  color: #ffffff;
+  text-align: center;
+  padding: 1.2rem;
+  font-size: 1.4rem;
+  font-weight: bold;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+.stats-banner__number {
+  font-size: 2rem;
+  margin-left: 0.5rem;              
+}
+
+/* ---------- CONTENEDOR DE TARJETAS ---------- */
+.stats-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  max-width: 1200px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+  justify-content: center;
+}
+
+/* Cada tarjeta */
+.stats-cards .card {
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.1);
+  padding: 1.2rem;
+  flex: 1 1 280px;
+  min-width: 280px;
+  max-width: 340px;
+  transition: transform 0.2s, box-shadow 0.2s;
+  position: relative;
+}
+.stats-cards .card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Título de tarjeta */
+.stats-cards .card h4 {
+  font-size: 1.2rem;
+  margin-bottom: 0.8rem;
+  color: #002244;                    /* Azul muy oscuro */
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 0.4rem;
+}
+
+/* Listas y párrafos dentro de tarjeta */
+.stats-cards .card ul,
+.stats-cards .card p {
+  margin-top: 0.6rem;
+}
+.stats-cards .card ul {
+  list-style: none;
+}
+.stats-cards .card li {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.4rem 0;
+  border-bottom: 1px dashed #e0e0e0;
+  font-size: 0.95rem;
+  color: #333333;
+}
+.stats-cards .card li:last-child {
+  border-bottom: none;
+}
+.stats-cards .card li span.value {
+  font-weight: 600;
+  color: #004c99;                    /* Azul medio-oscuro */
+}
+.stats-cards .card p {
+  font-size: 1rem;
+  font-weight: 400;
+  color: black;
+  text-align: center;
+}
+
+/* ---------- CONTENEDOR DE GRÁFICAS (FULL WIDTH) ---------- */
+.stats-charts {
+  width: 100%;
+  max-width: 1085px;
+  margin: 0 auto;
+  padding: 0 1rem;
+  display: grid;
+  grid-template-columns: 1fr;  /* Cada gráfica ocupa toda la fila */
+  gap: 2rem;
+}
+
+
+/* Cada bloque de gráfica */
+.stats-charts .chart-block {
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.1);
+  padding: 1.2rem;
+  position: relative;
+}
+
+/* Título del bloque de gráfica */
+.stats-charts .chart-block h4 {
+  margin-bottom: 0.8rem;
+  color: #002244;                    /* Azul muy oscuro */
+  font-size: 1.15rem;
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 0.4rem;
+}
+
+/* Etiqueta “Total” en la esquina superior derecha */
+.stats-charts .chart-block .chart-total {
+  position: absolute;
+  top: 1rem;
+  right: 1.2rem;
+  background: rgba(0, 34, 68, 0.05); /* Sutil sombra azul */
+  color: #002244;
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  font-weight: bold;
+}
+
+/* Ajuste de tamaño de los canvases */
+.stats-charts .chart-block canvas {
+  width: 100%  !important;
+  height: 300px !important;
+  max-height: 350px;
+  margin-top: 0.6rem;
+}
+
+/* Listas en bloques de “Top” */
+.stats-charts .chart-block ul {
+  list-style: none;
+  margin-top: 0.6rem;
+}
+.stats-charts .chart-block li {
+  font-size: 0.95rem;
+  margin-bottom: 0.4rem;
+  display: flex;
+  justify-content: space-between;
+}
+.stats-charts .chart-block li span.value {
+  font-weight: 600;
+  color: #004c99;
+}
+
+/* ---------- RESPONSIVIDAD ---------- */
+@media (max-width: 1024px) {
+  .stats-charts {
+    grid-template-columns: 1fr; /* Mantener una columna en pantallas medianas/pequeñas */
+  }
+}

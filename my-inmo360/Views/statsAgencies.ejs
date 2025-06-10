@@ -1,0 +1,252 @@
+<%- include('partials/header') %>
+<head>
+  <link rel="stylesheet" href="/css/admin.css">
+  <link rel="stylesheet" href="/css/statsAgencies.css">
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+</head>
+
+<div class="stats-banner">
+  Total de Inmobiliarias registradas:
+  <span class="stats-banner__number"><%= totalAgencies %></span>
+</div>
+
+<div class="stats-cards">
+  <!-- 1) Reparto por estado -->
+  <div class="card">
+    <h4>Reparto por Estado</h4>
+    <ul>
+      <% states.forEach(s => { %>
+        <li><strong><%= s.estado %>:</strong> <%= s.cnt %></li>
+      <% }) %>
+    </ul>
+  </div>
+
+  <!-- 2) Promedio de propiedades por agencia -->
+  <div class="card">
+    <h4>Promedio de Propiedades por Agencia</h4>
+    <p><%= avgProps %></p>
+  </div>
+
+  <!-- 3) % Agencias con ≥ 5 propiedades -->
+  <div class="card">
+    <h4>% con ≥ 5 Propiedades</h4>
+    <p><%= pctFive %>%</p>
+  </div>
+</div>
+
+<div class="stats-charts">
+  <!-- 4) Nuevas agencias por día (últimos 30 d) -->
+  <div class="chart-block large">
+    <h4>Nuevas Agencias (últimos 30 d)</h4>
+    <canvas id="newAgenciesChart"></canvas>
+    <div class="chart-total">
+      Total: <%= newAgencies.reduce((sum, r) => sum + parseInt(r.cnt, 10), 0) %>
+    </div>
+  </div>
+
+  <!-- 5) Evolución mensual (últimos 6 meses) -->
+  <div class="chart-block large">
+    <h4>Evolución Mensual (últimos 6 meses)</h4>
+    <canvas id="evoChart"></canvas>
+    <div class="chart-total">
+      Total Meses: <%= evo.length %>
+    </div>
+  </div>
+
+  <!-- 6) Distribución por Departamento (TOP 10) -->
+  <div class="chart-block medium">
+    <h4>Top 10 Departamentos</h4>
+    <canvas id="geoChart"></canvas>
+    <div class="chart-total">
+      Total Departamentos: <%= geo.length %>
+    </div>
+  </div>
+
+  <!-- 7) Top 5 Agencias con más Propiedades -->
+  <div class="chart-block medium">
+    <h4>Top 5 Agencias con más Propiedades</h4>
+    <canvas id="topPropsChart"></canvas>
+    <div class="chart-total">
+      Total Mostradas: <%= topProps.length %>
+    </div>
+  </div>
+
+  <!-- 8) Top 5 Agencias por Visitas (últimos 30 d) -->
+  <div class="chart-block medium">
+    <h4>Top 5 Agencias por Visitas (últimos 30 d)</h4>
+    <canvas id="topVisitsChart"></canvas>
+    <div class="chart-total">
+      Total Mostradas: <%= topVisits.length %>
+    </div>
+  </div>
+
+  <!-- 9) Top 5 Agencias por Ratio de Aprobación -->
+  <div class="chart-block medium">
+    <h4>Top 5 Agencias (Ratio Aprobación)</h4>
+    <canvas id="topRatioChart"></canvas>
+    <div class="chart-total">
+      Total Mostradas: <%= topRatio.length %>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ————————————————————————
+  // 1) New Agencies (últimos 30 d)
+  // ————————————————————————
+  const newLabels     = <%- JSON.stringify(newAgencies.map(r => r.day)) %>;
+  const newData       = <%- JSON.stringify(newAgencies.map(r => +r.cnt)) %>;
+
+  new Chart(document.getElementById('newAgenciesChart'), {
+    type: 'line',
+    data: {
+      labels: newLabels,
+      datasets: [{
+        label: 'Agencias Nuevas',
+        data: newData,
+        borderColor: '#003366',
+        backgroundColor: 'rgba(0, 51, 102, 0.2)',
+        fill: true,
+        tension: 0.3
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        x: { grid: { display: false } },
+        y: { beginAtZero: true }
+      }
+    }
+  });
+
+  // ————————————————————————
+  // 2) Evolución Mensual (últimos 6 meses)
+  // ————————————————————————
+  const evoLabels = <%- JSON.stringify(evo.map(r => r.month)) %>;
+  const evoData   = <%- JSON.stringify(evo.map(r => +r.cnt)) %>;
+
+  new Chart(document.getElementById('evoChart'), {
+    type: 'bar',
+    data: {
+      labels: evoLabels,
+      datasets: [{
+        label: 'Nuevas Agencias por Mes',
+        data: evoData,
+        backgroundColor: '#004c99'
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        x: { grid: { display: false } },
+        y: { beginAtZero: true }
+      }
+    }
+  });
+
+  // ————————————————————————
+  // 3) Distribución por Departamento (TOP 10)
+  // ————————————————————————
+  const geoLabels   = <%- JSON.stringify(geo.map(r => r.departamento)) %>;
+  const geoData     = <%- JSON.stringify(geo.map(r => +r.cnt)) %>;
+
+  new Chart(document.getElementById('geoChart'), {
+    type: 'bar',
+    data: {
+      labels: geoLabels,
+      datasets: [{
+        label: 'Inmobiliarias',
+        data: geoData,
+        backgroundColor: '#0055a5'
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        x: { grid: { display: false } },
+        y: { beginAtZero: true }
+      }
+    }
+  });
+
+  // ————————————————————————
+  // 4) Top 5 Agencias con más Propiedades
+  // ————————————————————————
+  const topPropsLabels = <%- JSON.stringify(topProps.map(r => r.agencia)) %>;
+  const topPropsData   = <%- JSON.stringify(topProps.map(r => +r.cnt_props)) %>;
+
+  new Chart(document.getElementById('topPropsChart'), {
+    type: 'bar',
+    data: {
+      labels: topPropsLabels,
+      datasets: [{
+        label: 'Propiedades',
+        data: topPropsData,
+        backgroundColor: '#0066cc'
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        x: { grid: { display: false } },
+        y: { beginAtZero: true }
+      }
+    }
+  });
+
+  // ————————————————————————
+  // 5) Top 5 Agencias por Visitas (últ. 30 d)
+  // ————————————————————————
+  const topVisitsLabels = <%- JSON.stringify(topVisits.map(r => r.agencia)) %>;
+  const topVisitsData   = <%- JSON.stringify(topVisits.map(r => +r.total_visits)) %>;
+
+  new Chart(document.getElementById('topVisitsChart'), {
+    type: 'bar',
+    data: {
+      labels: topVisitsLabels,
+      datasets: [{
+        label: 'Visitas',
+        data: topVisitsData,
+        backgroundColor: '#0077e6'
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        x: { grid: { display: false } },
+        y: { beginAtZero: true }
+      }
+    }
+  });
+
+  // ————————————————————————
+  // 6) Top 5 Agencias por Ratio de Aprobación
+  // ————————————————————————
+  const topRatioLabels = <%- JSON.stringify(topRatio.map(r => r.agencia)) %>;
+  const topRatioData   = <%- JSON.stringify(topRatio.map(r => +r.approval_ratio)) %>;
+
+  new Chart(document.getElementById('topRatioChart'), {
+    type: 'bar',
+    data: {
+      labels: topRatioLabels,
+      datasets: [{
+        label: 'Aprobación (%)',
+        data: topRatioData,
+        backgroundColor: '#003f8a'
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        x: { grid: { display: false } },
+        y: {
+          beginAtZero: true,
+          max: 100
+        }
+      }
+    }
+  });
+</script>
+
+<%- include('partials/footer') %>

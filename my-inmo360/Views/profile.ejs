@@ -81,7 +81,18 @@
             <img src="<%= user.profile_pic %>" alt="Foto de perfil actual" class="preview-img">
           <% } %>
         </div>
-        <input type="file" name="profilePic" id="profilePic" accept="image/*">
+        <input 
+          type="file" 
+          name="profilePic" 
+          id="profilePic" 
+          accept="
+            image/jpeg,
+            image/png,
+            image/heic,
+            image/heif,
+            image/webp,
+            image/*"
+        >
         <div id="new-preview"></div>
       </div>
     </div>
@@ -112,6 +123,8 @@
   </form>
 </div>
 
+<script src="https://unpkg.com/heic2any/dist/heic2any.min.js"></script>
+
 <script>
   document.addEventListener('DOMContentLoaded', function() {
     // Carga dinámica de municipios
@@ -141,20 +154,43 @@
 
     if (deptSelect.value) deptSelect.dispatchEvent(new Event('change'));
 
-    // Preview instantáneo de nueva imagen
-    document.getElementById('profilePic').addEventListener('change', function (e) {
-      const newPrev = document.getElementById('new-preview');
-      const currPrev = document.getElementById('current-preview');
-      newPrev.innerHTML = '';
-      currPrev.innerHTML = '';
-      const file = e.target.files[0];
-      if (file) {
-        const img = document.createElement('img');
-        img.className = 'preview-img';
-        img.src = URL.createObjectURL(file);
-        newPrev.appendChild(img);
+  // Preview instantáneo de nueva imagen con soporte HEIC/HEIF
+  document.getElementById('profilePic').addEventListener('change', async function (e) {
+    const newPrev  = document.getElementById('new-preview');
+    const currPrev = document.getElementById('current-preview');
+    newPrev.innerHTML  = '';
+    currPrev.innerHTML = '';
+
+    const file = e.target.files[0];
+    if (!file) return;
+
+    let blob = file;
+    const isHeic = file.type === 'image/heic' ||
+                   file.type === 'image/heif' ||
+                   /\.heic$/i.test(file.name) ||
+                   /\.heif$/i.test(file.name);
+
+    if (isHeic) {
+      try {
+        // Convierte HEIC/HEIF a JPEG para poder mostrarlo
+        blob = await heic2any({
+          blob: file,
+          toType: 'image/jpeg',
+          quality: 0.8
+        });
+      } catch (err) {
+        console.error('Error al convertir HEIC para preview:', err);
+        // Si falla la conversión, seguimos con el blob original
+        blob = file;
       }
-    });
+    }
+
+    const url = URL.createObjectURL(blob);
+    const img = document.createElement('img');
+    img.className = 'preview-img';
+    img.src       = url;
+    newPrev.appendChild(img);
+  });
 
     // Mostrar/ocultar select de inmobiliaria
     const belongRadios = document.querySelectorAll('input[name="belongsToAgency"]');

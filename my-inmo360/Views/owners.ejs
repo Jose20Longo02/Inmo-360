@@ -21,32 +21,37 @@
   </section>
 
   <!-- Sección 2: Servicios -->
-  <section class="servicios-section">
-    <h2 class="section-headline">¿Qué servicio le interesa usar?</h2>
-    <div class="servicios-grid">
-      <div class="servicio-card">
-        <div class="icono">
-          <img src="/images/icons/rentar-icon.png" alt="Rentar" width="25" height="25">
-        </div>
-        <h3 class="servicio-title">Rentar</h3>
-        <p class="servicio-desc">Rente su propiedad desde Q0.0</p>
+<section class="servicios-section">
+  <h2 class="section-headline">¿Qué servicio le interesa usar?</h2>
+  <div class="servicios-grid">
+    <!-- Rentar -->
+    <a href="<%= session && session.user ? '/properties/new' : '/login' %>" class="servicio-card">
+      <div class="icono">
+        <img src="/images/icons/rentar-icon.png" alt="Rentar" width="25" height="25">
       </div>
-      <div class="servicio-card">
-        <div class="icono">
-          <img src="/images/icons/vender-icon.png" alt="Vender" width="25" height="25">
-        </div>
-        <h3 class="servicio-title">Vender</h3>
-        <p class="servicio-desc">Venda su propiedad desde Q0.0</p>
+      <h3 class="servicio-title">Rentar</h3>
+      <p class="servicio-desc">Rente su propiedad desde Q0.0</p>
+    </a>
+
+    <!-- Vender -->
+    <a href="<%= session && session.user ? '/properties/new' : '/login' %>" class="servicio-card">
+      <div class="icono">
+        <img src="/images/icons/vender-icon.png" alt="Vender" width="25" height="25">
       </div>
-      <div class="servicio-card">
-        <div class="icono">
-          <img src="/images/icons/buscar-inmobiliaria-icon.png" alt="Buscar inmobiliaria" width="25" height="25">
-        </div>
-        <h3 class="servicio-title">Buscar una inmobiliaria</h3>
-        <p class="servicio-desc">Resultados más rápidos con profesionales</p>
+      <h3 class="servicio-title">Vender</h3>
+      <p class="servicio-desc">Venda su propiedad desde Q0.0</p>
+    </a>
+
+    <!-- Buscar una inmobiliaria -->
+    <a href="/search-agencies" class="servicio-card">
+      <div class="icono">
+        <img src="/images/icons/buscar-inmobiliaria-icon.png" alt="Buscar inmobiliaria" width="25" height="25">
       </div>
-    </div>
-  </section>
+      <h3 class="servicio-title">Buscar una inmobiliaria</h3>
+      <p class="servicio-desc">Resultados más rápidos con profesionales</p>
+    </a>
+  </div>
+</section>
 
   <!-- Sección 3: Newsletter -->
   <section class="newsletter-section">

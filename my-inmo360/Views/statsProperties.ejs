@@ -1,0 +1,188 @@
+<%- include('partials/header') %>
+<head>
+  <link rel="stylesheet" href="/css/statsProperties.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<div class="stats-banner">
+  Total de propiedades: <span class="stats-banner__number"><%= totalProps %></span>
+</div>
+
+<div class="stats-cards">
+  <div class="card">
+    <h4>Propiedades por Estado</h4>
+    <ul>
+      <% byState.forEach(s => { %>
+        <li><strong><%= s.estado %>:</strong> <%= s.cnt %></li>
+      <% }) %>
+    </ul>
+  </div>
+  <div class="card">
+    <h4>Propiedades por Tipo</h4>
+    <ul>
+      <% byType.forEach(t => { %>
+        <li><strong><%= t.tipo_propiedad %>:</strong> <%= t.cnt %></li>
+      <% }) %>
+    </ul>
+  </div>
+  <div class="card">
+    <h4>Propiedades por Operación</h4>
+    <ul>
+      <% byOperation.forEach(o => { %>
+        <li><strong><%= o.operacion %>:</strong> <%= o.cnt %></li>
+      <% }) %>
+    </ul>
+  </div>
+  <div class="card">
+    <h4>Precio Promedio</h4>
+    <ul>
+      <% priceStats.forEach(p => { %>
+        <li>
+          <strong><%= p.tipo_propiedad %>:</strong>
+            Q<%= parseFloat(p.avg_price).toLocaleString('en-US',{minimumFractionDigits:2, maximumFractionDigits:2}) %>
+        </li>
+      <% }) %>
+    </ul>
+  </div>
+  <div class="card">
+    <h4>Proporción Lujo / No Lujo</h4>
+    <p>Lujo: <%= cntLuxury %> &nbsp;|&nbsp; No Lujo: <%= cntNonlux %></p>
+  </div>
+  <div class="card">
+    <h4>Imágenes / Videos / Planos</h4>
+    <p>Promedio de imágenes: <%= avgImages %></p>
+    <p>Con video: <%= withVideo %> / Total: <%= totalCount %></p>
+    <p>Con plano: <%= withPlano %> / Total: <%= totalCount %></p>
+  </div>
+</div>
+
+<div class="stats-charts">
+  <div class="chart-block large">
+    <h4>Nuevas propiedades (últimos 30 d)</h4>
+    <canvas id="newPerDayChart"></canvas>
+    <div class="chart-total">Total: <%= newPerDay.reduce((sum, r)=> sum + parseInt(r.cnt,10), 0) %></div>
+  </div>
+
+  <div class="chart-block large">
+    <h4>Visitas &amp; Clicks (últimos 30 d)</h4>
+    <canvas id="engagementChart"></canvas>
+    <div class="chart-total">Total visitas: <%= engagement.reduce((sum, r)=> sum + parseInt(r.visitas,10), 0) %></div>
+  </div>
+
+  <div class="chart-block medium">
+    <h4>Top 10 Departamentos (aprobadas)</h4>
+    <canvas id="topGeoChart"></canvas>
+    <div class="chart-total">Total: <%= topGeo.reduce((sum, r)=> sum + parseInt(r.cnt,10), 0) %></div>
+  </div>
+
+  <div class="chart-block small">
+    <h4>Top 5 Agencias con más Propiedades publicadas</h4>
+    <canvas id="topAgenciesChart"></canvas>
+  </div>
+
+  <div class="chart-block small">
+    <h4>Top 5 Anunciantes (visitas últimos 30 d)</h4>
+    <canvas id="topAdvertisersChart"></canvas>
+  </div>
+
+  <div class="chart-block small">
+    <h4>Top 5 Propiedades (visitas últimos 30 d)</h4>
+    <canvas id="topPropsChart"></canvas>
+  </div>
+</div>
+
+<script>
+  // — Preparar datos para cada gráfica —
+
+  // 6. Nuevas propiedades por día
+  const newLabels      = <%- JSON.stringify(newPerDay.map(r=>r.day)) %>;
+  const newData        = <%- JSON.stringify(newPerDay.map(r=>+r.cnt)) %>;
+
+  // 7. Engagement (visitas + clicks) — aquí dibujamos visitas y clicks en un mismo gráfico de líneas con 4 datasets
+  const engLabels      = <%- JSON.stringify(engagement.map(r=>r.day)) %>;
+  const visitasData    = <%- JSON.stringify(engagement.map(r=>+r.visitas)) %>;
+  const waClicksData   = <%- JSON.stringify(engagement.map(r=>+r.wa_clicks)) %>;
+  const telClicksData  = <%- JSON.stringify(engagement.map(r=>+r.tel_clicks)) %>;
+  const emailClicksData= <%- JSON.stringify(engagement.map(r=>+r.email_clicks)) %>;
+
+  // 8. Top 10 Departamentos
+  const geoLabels      = <%- JSON.stringify(topGeo.map(r=>r.departamento)) %>;
+  const geoData        = <%- JSON.stringify(topGeo.map(r=>+r.cnt)) %>;
+
+  // 11. Top 5 Agencias
+  const agenciesLabels   = <%- JSON.stringify(topAgencies.map(r=>r.agency_name)) %>;
+  const agenciesData     = <%- JSON.stringify(topAgencies.map(r=>+r.cnt)) %>;
+
+  // 12. Top 5 Anunciantes
+  const advLabels      = <%- JSON.stringify(topAdvertisers.map(r=>r.advertiser)) %>;
+  const advData        = <%- JSON.stringify(topAdvertisers.map(r=>+r.total_visits)) %>;
+
+  // 13. Top 5 Propiedades
+  const propLabels     = <%- JSON.stringify(topProps.map(r=>r.titulo)) %>;
+  const propData       = <%- JSON.stringify(topProps.map(r=>+r.visitas)) %>;
+
+  // — Configuración genérica para Chart.js —
+  function makeLineChart(ctxId, labels, datasets) {
+    new Chart(document.getElementById(ctxId), {
+      type: 'line',
+      data: { labels, datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom' }
+        },
+        scales: {
+          x: { grid: { display: false } },
+          y: { beginAtZero: true }
+        }
+      }
+    });
+  }
+  function makeBarChart(ctxId, labels, data, label) {
+    new Chart(document.getElementById(ctxId), {
+      type: 'bar',
+      data: { labels, datasets: [{ label, data, backgroundColor: '#75FBD3' }] },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          x: { grid: { display: false } },
+          y: { beginAtZero: true }
+        }
+      }
+    });
+  }
+
+  // — Dibujar todas las gráficas —
+
+  // 6. Nuevas propiedades por día (línea)
+  makeLineChart('newPerDayChart', newLabels, [
+    { label: 'Nuevas props', data: newData, borderColor: '#007bff', tension: 0.3, fill:false }
+  ]);
+
+  // 7. Engagement (visitas + clicks) (línea múltiple)
+  makeLineChart('engagementChart', engLabels, [
+    { label: 'Visitas',    data: visitasData,    borderColor: '#28a745', tension:0.3, fill:false },
+    { label: 'WA Clicks',  data: waClicksData,   borderColor: '#ffc107', tension:0.3, fill:false },
+    { label: 'Tel Clicks', data: telClicksData,  borderColor: '#17a2b8', tension:0.3, fill:false },
+    { label: 'Email Clicks',data: emailClicksData,borderColor: '#dc3545', tension:0.3, fill:false }
+  ]);
+
+  // 8. Top 10 Departamentos (barra)
+  makeBarChart('topGeoChart', geoLabels, geoData, 'Propiedades');
+
+  // 11. Top 5 Agencias (barra)
+  makeBarChart('topAgenciesChart', agenciesLabels, agenciesData, 'Propiedades');
+
+  // 12. Top 5 Anunciantes (barra)
+  makeBarChart('topAdvertisersChart', advLabels, advData, 'Visitas');
+
+  // 13. Top 5 Propiedades (barra)
+  makeBarChart('topPropsChart', propLabels, propData, 'Visitas');
+</script>
+
+<%- include('partials/footer') %>

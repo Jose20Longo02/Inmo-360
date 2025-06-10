@@ -1,0 +1,135 @@
+/* ============================= */
+/*     STATS AGENCIES CSS       */
+/* ============================= */
+
+/* Reset básico */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+body {
+  background-color: #f2f2f2;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: #222;
+}
+
+/* Banner principal */
+.stats-banner {
+  background-color: #003366;        /* Azul muy oscuro */
+  color: #ffffff;
+  text-align: center;
+  padding: 1.2rem;
+  font-size: 1.4rem;
+  font-weight: bold;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+.stats-banner__number {
+  font-size: 2rem;
+  margin-left: 0.5rem;              
+}
+
+/* Contenedor de tarjetas */
+.stats-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  max-width: 1200px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+  justify-content: center;
+}
+
+/* Cada tarjeta */
+.stats-cards .card {
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  padding: 1rem 1.2rem;
+  flex: 1 1 260px;
+  min-width: 260px;
+  max-width: 350px;
+  transition: transform 0.2s;
+}
+.stats-cards .card:hover {
+  transform: translateY(-3px);
+}
+.stats-cards .card h4 {
+  font-size: 1.15rem;
+  margin-bottom: 0.8rem;
+  color: #003366;                    /* Azul muy oscuro */
+}
+.stats-cards .card ul {
+  list-style: none;
+}
+.stats-cards .card li {
+  font-size: 0.95rem;
+  margin-bottom: 0.4rem;
+}
+.stats-cards .card p {
+  font-size: 0.95rem;
+  margin-bottom: 0.4rem;
+}
+
+/* Contenedor de gráficas */
+.stats-charts {
+  width: 100%;
+  max-width: 1085px;
+  margin: 0 auto;
+  padding: 0 1rem;
+  display: grid;
+  grid-template-columns: 1fr;  /* Cada gráfica ocupa toda la fila */
+  gap: 2rem;
+}
+
+/* Cada bloque de gráfica */
+.stats-charts .chart-block {
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  padding: 1rem 1.2rem;
+  position: relative;
+}
+
+/* Título de cada bloque */
+.stats-charts .chart-block h4 {
+  margin-bottom: 0.8rem;
+  color: #003366;                    /* Azul muy oscuro */
+  font-size: 1.1rem;
+}
+
+/* Ajuste de tamaño de los canvas */
+.stats-charts .chart-block canvas {
+  width: 100%  !important;
+  height: 300px !important;
+}
+
+/* Etiqueta “Total” en la esquina superior derecha */
+.stats-charts .chart-block .chart-total {
+  position: absolute;
+  top: 1rem;
+  right: 1.2rem;
+  background: rgba(0, 51, 102, 0.05); /* Sutil sombra azul */
+  color: #003366;
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  font-weight: bold;
+}
+
+/* Responsivo: en pantallas pequeñas, el grid se sigue apilando */
+@media (max-width: 768px) {
+  .stats-charts {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Personalizaciones extra para listas dentro de charts (si llegaran a usarse) */
+.stats-charts .chart-block ul {
+  list-style: none;
+  margin-top: 0.5rem;
+}
+.stats-charts .chart-block li {
+  font-size: 0.95rem;
+  margin-bottom: 0.3rem;
+}
