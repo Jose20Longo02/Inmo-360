@@ -1,6 +1,5 @@
 // server.js
 const express = require('express');
-const uploadMemory = require('./uploadMemory');
 const uploadS3    = require('./uploadS3');
 const AWS = require('aws-sdk');
 const multerS3 = require('multer-s3');
@@ -60,7 +59,7 @@ app.use((req, res, next) => {
 // CONFIGURACIÓN MULTER PARA DIGITALOCEAN SPACES
 // =========================
 
-// uploadMemory.js
+// uploadMemory.js  
 function fileFilter(req, file, cb) {
   if (file.mimetype.startsWith('image/')) cb(null, true);
   else cb(new Error('Formato no soportado: solo imágenes'), false);
