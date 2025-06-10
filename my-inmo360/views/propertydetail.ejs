@@ -1,8 +1,11 @@
+<head>
+  <link rel="stylesheet" href="/css/propertydetail.css">
+  <link rel="stylesheet" href="/css/header.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><%= property.titulo %></title>
+</head>
 <%- include('partials/header') %>
-<link rel="stylesheet" href="/css/propertydetail.css">
-<link rel="stylesheet" href="/css/header.css">
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title><%= property.titulo %></title>
+
 
 <div class="property-detail-container <%= property.luxo ? 'luxury' : '' %>">
   <div class="detail-main">
