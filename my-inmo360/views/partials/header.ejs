@@ -180,17 +180,19 @@ document.addEventListener('DOMContentLoaded', () => {
   function markAllRead() {
     const toMark = allNotifs.filter(n => !n.is_read).map(n => n.id);
     if (!toMark.length) return Promise.resolve();
+    // optimistically mark locally
+    allNotifs.forEach(n => n.is_read = true);
+    renderDropdown();
+    updateBadge(); // clear badge immediately
     return Promise.all(toMark.map(id =>
       fetch(`/notifications/${id}/read`, { method: 'POST' })
-    )).then(() => {
-      allNotifs.forEach(n => n.is_read = true);
-      renderDropdown();
-      updateBadge();
-    });
+        .catch(console.error)
+    ));
   }
 
   loadNotifs();
 
+  // Desktop bell
   notifBtn && notifBtn.addEventListener('click', e => {
     e.stopPropagation();
     markAllRead().then(() => {
@@ -198,6 +200,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  // Mobile bell
   notifBtnM && notifBtnM.addEventListener('click', e => {
     e.stopPropagation();
     markAllRead().then(() => {
