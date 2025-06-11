@@ -575,7 +575,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // disable input while loading
     imgInput.disabled = true;
     // show loading indicator
-    previewImgs.innerHTML = '<p style="font-size:1.2rem;font-weight:bold;">Cargando imágenes...</p>';
+    previewImgs.innerHTML = '<p style="font-size:1.2rem;font-weight:bold;">Cargando imágenes... Esto puede demorar unos minutos.</p>';
     // cleanup old URLs
     previewURLs.forEach(u => URL.revokeObjectURL(u));
     currentFiles = Array.from(imgInput.files);
