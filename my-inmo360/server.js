@@ -2596,15 +2596,41 @@ app.post(
 
 // Eliminar propiedad
 
+// Helper: Borra todos los objetos bajo un prefijo en Spaces
+async function deleteAllInFolder(folderUuid) {
+  const bucket = process.env.SPACES_BUCKET;
+  const prefix = `propiedades/${folderUuid}/`;
+  let ContinuationToken = undefined;
+
+  do {
+    const resp = await s3v2.listObjectsV2({
+      Bucket: bucket,
+      Prefix: prefix,
+      ContinuationToken
+    }).promise();
+
+    if (resp.Contents.length) {
+      await s3v2.deleteObjects({
+        Bucket: bucket,
+        Delete: {
+          Objects: resp.Contents.map(obj => ({ Key: obj.Key }))
+        }
+      }).promise();
+    }
+
+    ContinuationToken = resp.IsTruncated ? resp.NextContinuationToken : null;
+  } while (ContinuationToken);
+}
+
 // Eliminar propiedad
 app.post('/properties/delete/:id', isAuthenticated, async (req, res) => {
   const { id } = req.params;
   const userId = req.session.user.id;
 
   try {
-    // 1) Obtener la propiedad y asegurarnos de que pertenece al usuario
+    // 1) Obtener folder_uuid y verificar propiedad
     const result = await pool.query(
-      `SELECT folder_uuid, imagenes_urls, video_url, plano_url
+      `SELECT folder_uuid
          FROM propiedades 
         WHERE id = $1 
           AND user_id = $2`,
@@ -2612,46 +2638,20 @@ app.post('/properties/delete/:id', isAuthenticated, async (req, res) => {
     );
 
     if (result.rows.length === 0) {
-      // O bien no existe o no es tuya
       return res.status(404).send('Propiedad no encontrada o no tienes permiso para borrarla.');
     }
 
-    const { folder_uuid: folderUuid, imagenes_urls, video_url, plano_url } = result.rows[0];
+    const { folder_uuid: folderUuid } = result.rows[0];
 
-    // 2) Eliminar archivos en Spaces: imágenes, video y plano
-    //    Asumimos que deleteFromSpacesByUrl está definido en tu código y usa s3v2
-    let urls = [];
-    if (imagenes_urls) {
-      if (typeof imagenes_urls === 'string') {
-        try {
-          const arr = JSON.parse(imagenes_urls);
-          if (Array.isArray(arr)) {
-            urls = urls.concat(arr);
-          }
-        } catch (e) {
-          console.warn('No se pudo parsear imagenes_urls:', e);
-        }
-      } else if (Array.isArray(imagenes_urls)) {
-        urls = urls.concat(imagenes_urls);
-      }
-    }
-    if (video_url) {
-      urls.push(video_url);
-    }
-    if (plano_url) {
-      urls.push(plano_url);
+    // 2) Eliminar **todas** las versiones (JPG, WEBP, videos, planos, etc.)
+    try {
+      await deleteAllInFolder(folderUuid);
+    } catch (err) {
+      console.error('Error borrando carpeta completa en Spaces:', err);
+      // Continuamos; igual queremos eliminar el registro
     }
 
-    for (const fileUrl of urls) {
-      try {
-        await deleteFromSpacesByUrl(fileUrl);
-      } catch (err) {
-        console.error('Error borrando en Spaces URL:', fileUrl, err);
-        // Continuar con los siguientes, no interrumpir toda la operación
-      }
-    }
-
-    // 3) Eliminar la carpeta local con todos los archivos (si usas copias locales)
+    // 3) Borrar carpeta local si existe (solo si usas uploads locales)
     const folderPath = path.join(__dirname, 'public', 'uploads', 'propiedades', folderUuid);
     if (fs.existsSync(folderPath)) {
       try {
@@ -2660,17 +2660,12 @@ app.post('/properties/delete/:id', isAuthenticated, async (req, res) => {
       } catch (e) {
         console.error('Error eliminando carpeta local:', e);
       }
-    } else {
-      console.log(`Carpeta local no encontrada para borrar: ${folderPath}`);
     }
 
-    // 4) Borrar el registro de la base de datos
-    await pool.query(
-      `DELETE FROM propiedades WHERE id = $1`,
-      [id]
-    );
+    // 4) Eliminar el registro de la base de datos
+    await pool.query(`DELETE FROM propiedades WHERE id = $1`, [id]);
 
-    // 5) Redirigir de vuelta al listado
+    // 5) Redirigir al listado
     res.redirect('/properties');
   } catch (err) {
     console.error('Error al eliminar propiedad:', err);
