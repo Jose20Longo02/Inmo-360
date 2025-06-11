@@ -162,7 +162,9 @@ document.addEventListener('DOMContentLoaded', () => {
       notifBadgeM.textContent = count;
       notifBadgeM.classList.remove('hidden');
     } else {
+      notifBadge.textContent  = '';
       notifBadge.classList.add('hidden');
+      notifBadgeM.textContent = '';
       notifBadgeM.classList.add('hidden');
     }
   }
@@ -180,10 +182,11 @@ document.addEventListener('DOMContentLoaded', () => {
   function markAllRead() {
     const toMark = allNotifs.filter(n => !n.is_read).map(n => n.id);
     if (!toMark.length) return Promise.resolve();
-    // optimistically mark locally
+    // 1) Optimistically mark local
     allNotifs.forEach(n => n.is_read = true);
     renderDropdown();
-    updateBadge(); // clear badge immediately
+    updateBadge(); // immediately clear badge
+    // 2) Send requests
     return Promise.all(toMark.map(id =>
       fetch(`/notifications/${id}/read`, { method: 'POST' })
         .catch(console.error)
