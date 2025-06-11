@@ -466,19 +466,20 @@
 
 <!-- SCRIPT: Vistas previas para imágenes con soporte HEIC/HEIF -->
 <!-- SCRIPT: Vistas previas para imágenes, video y plano con soporte HEIC/HEIF -->
+<!-- SCRIPT: Previews optimizados para imágenes, video y plano -->
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-  const imgInput         = document.getElementById('imagenes');
-  const videoInput       = document.getElementById('video');
-  const planoInput       = document.getElementById('plano');
+  const imgInput    = document.getElementById('imagenes');
+  const videoInput  = document.getElementById('video');
+  const planoInput  = document.getElementById('plano');
 
-  const previewImgs      = document.getElementById('preview-imagenes');
-  const previewVideo     = document.getElementById('preview-video');
-  const previewPlano     = document.getElementById('preview-plano');
+  const previewImgs   = document.getElementById('preview-imagenes');
+  const previewVideo  = document.getElementById('preview-video');
+  const previewPlano  = document.getElementById('preview-plano');
 
-  const infoImgs         = document.getElementById('imagenes-info');
-  const infoVideo        = document.getElementById('video-info');
-  const infoPlano        = document.getElementById('plano-info');
+  const infoImgs   = document.getElementById('imagenes-info');
+  const infoVideo  = document.getElementById('video-info');
+  const infoPlano  = document.getElementById('plano-info');
 
   // ————— Imágenes —————
   let currentFiles = [];
@@ -497,8 +498,11 @@ document.addEventListener('DOMContentLoaded', () => {
     let blob = file;
     const isHeic = /heic|heif/i.test(file.type) || /\.heic$/i.test(file.name);
     if (isHeic) {
-      try { blob = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.8 }); }
-      catch(err){ console.warn('HEIC→JPEG falló, usando original', err); }
+      try {
+        blob = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.8 });
+      } catch (err) {
+        console.warn('HEIC→JPEG falló, usando original', err);
+      }
     }
     return URL.createObjectURL(blob);
   }
@@ -509,13 +513,13 @@ document.addEventListener('DOMContentLoaded', () => {
       const wr = document.createElement('div');
       wr.className = 'preview-item';
 
-      // Badge
+      // Nº de orden
       const bd = document.createElement('span');
       bd.className = 'order-label';
       bd.innerText = i + 1;
       wr.appendChild(bd);
 
-      // Arrows
+      // Flechas de orden
       const ctr = document.createElement('div');
       ctr.className = 'arrow-controls';
       const btnUp = document.createElement('button');
@@ -540,7 +544,7 @@ document.addEventListener('DOMContentLoaded', () => {
       ctr.appendChild(btnDn);
       wr.appendChild(ctr);
 
-      // Remove
+      // Botón eliminar
       const rm = document.createElement('button');
       rm.type = 'button'; rm.className = 'remove-preview'; rm.innerText = '×';
       rm.onclick = e => {
@@ -553,7 +557,7 @@ document.addEventListener('DOMContentLoaded', () => {
       };
       wr.appendChild(rm);
 
-      // Image
+      // Imagen
       const img = document.createElement('img');
       img.className = 'preview-img';
       img.src = url;
@@ -564,7 +568,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   imgInput.addEventListener('change', async () => {
-    // cleanup antiguos URLs
+    // liberar URLs previos
     previewURLs.forEach(u => URL.revokeObjectURL(u));
     currentFiles = Array.from(imgInput.files);
     previewURLs  = await Promise.all(currentFiles.map(f => getPreviewURL(f)));
@@ -572,7 +576,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderImgs();
   });
 
-  // inicializar si ya había archivos
+  // inicializar si ya había archivos (edición)
   if (imgInput.files.length) {
     (async () => {
       currentFiles = Array.from(imgInput.files);
@@ -590,8 +594,9 @@ document.addEventListener('DOMContentLoaded', () => {
       infoVideo.textContent = file.name;
       const url = URL.createObjectURL(file);
       const vid = document.createElement('video');
-      vid.controls = true; vid.width = 200;
-      vid.src = url;
+      vid.controls = true;
+      vid.width    = 200;
+      vid.src      = url;
       vid.onloadeddata = () => URL.revokeObjectURL(url);
       previewVideo.appendChild(vid);
     } else {
@@ -605,17 +610,20 @@ document.addEventListener('DOMContentLoaded', () => {
     if (planoInput.files.length) {
       const file = planoInput.files[0];
       infoPlano.textContent = file.name;
-      // soporta HEIC
       let blob = file;
       const isHeic = /heic|heif/i.test(file.type) || /\.heic$/i.test(file.name);
       if (isHeic) {
-        try { blob = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.8 }); }
-        catch(err){ console.warn('HEIC plano→JPEG falló', err); }
+        try {
+          blob = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.8 });
+        } catch (err) {
+          console.warn('HEIC plano→JPEG falló', err);
+        }
       }
       const url = URL.createObjectURL(blob);
       const img = document.createElement('img');
-      img.src = url; img.style.maxWidth = '200px';
-      img.onload = () => URL.revokeObjectURL(url);
+      img.src       = url;
+      img.style.maxWidth = '200px';
+      img.onload    = () => URL.revokeObjectURL(url);
       previewPlano.appendChild(img);
     } else {
       infoPlano.textContent = 'Sin archivo seleccionado';
