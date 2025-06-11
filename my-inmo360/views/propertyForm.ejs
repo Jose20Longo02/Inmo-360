@@ -7,6 +7,24 @@
 </head>
 <%- include('partials/header') %>
 
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const form       = document.querySelector('.compact-form-container form');
+  const submitBtn  = form.querySelector('button[type="submit"]');
+  const modal      = document.getElementById('publishing-modal');
+
+  form.addEventListener('submit', (e) => {
+    // Mostrar nuestro modal
+    modal.classList.remove('modal-hidden');
+    modal.classList.add('modal-visible');
+    // Deshabilitar botón para evitar doble click
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Publicando...';
+    // Deja que el form se envíe normalmente
+  });
+});
+</script>
+
 <div class="compact-form-container">
   <h2 class="form-title"><%= property ? 'Editar Propiedad' : 'Nueva Propiedad' %></h2>
   <form action="<%= action %>" method="POST" enctype="multipart/form-data">
@@ -306,6 +324,15 @@
     
     <button type="submit" class="btn"><%= property ? 'Actualizar' : 'Crear' %></button>
   </form>
+</div>
+
+<!-- Modal de Publicación -->
+<div id="publishing-modal" class="modal-hidden">
+  <div class="modal-backdrop"></div>
+  <div class="modal-box">
+    <p>La propiedad está siendo publicada.<br>
+       Esto puede demorar unos segundos, no cierre la ventana.</p>
+  </div>
 </div>
 
 <!-- SCRIPT: Actualización dinámica de Municipio y Zona -->
@@ -643,18 +670,6 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-  const form = document.querySelector('form[action="/properties/new"]');
-  const submitBtn = form.querySelector('button[type="submit"]');
-
-  form.addEventListener('submit', () => {
-    // Deshabilita el botón para evitar múltiples envíos
-    submitBtn.disabled = true;
-    submitBtn.textContent = 'Publicando...';
-  });
-});
-</script>
 
 
 

@@ -404,3 +404,35 @@ body::before {
   border-radius: 4px;
   margin-top: 0.75rem;     /* Aumentado de 0.5rem */
 }
+
+/* Modal personalizado */
+.modal-hidden {
+  display: none;
+}
+#publishing-modal.modal-visible {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+#publishing-modal .modal-backdrop {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.6);
+}
+#publishing-modal .modal-box {
+  position: relative;
+  background: #fff;
+  padding: 1.5rem 2rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  text-align: center;
+  font-weight: bold;
+  color: #222;
+  max-width: 90%;
+  z-index: 10001;
+}
