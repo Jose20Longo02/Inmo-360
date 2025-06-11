@@ -15,7 +15,17 @@
         <div class="slider">
           <% images.forEach((url, idx) => { %>
             <div class="slide <%= idx === 0 ? 'active' : '' %>">
-              <img src="<%= url %>" alt="Imagen <%= idx + 1 %>">
+              <img
+                src="<%= url.replace(/(\.\w+)$/, '_400$1') %>"
+                srcset="
+                  <%= url.replace(/(\.\w+)$/, '_400$1') %> 400w,
+                  <%= url.replace(/(\.\w+)$/, '_800$1') %> 800w,
+                  <%= url %> 1200w
+                "
+                sizes="(max-width: 768px) 100vw, 600px"
+                loading="lazy"
+                alt="Imagen <%= idx + 1 %>"
+              >
             </div>
           <% }) %>
         </div>

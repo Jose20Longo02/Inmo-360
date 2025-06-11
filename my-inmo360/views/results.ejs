@@ -284,7 +284,18 @@
             <div class="property-badge">
               <%= prop.operacion === 'renta' ? 'Renta' : 'Venta' %>
             </div>
-            <img src="<%= imageSrc %>" alt="<%= prop.titulo %>">
+            <img
+              src="<%= imageSrc %>"
+              srcset="
+                <%= imageSrc.replace(/(\.\w+)$/, '_400$1') %> 400w,
+                <%= imageSrc.replace(/(\.\w+)$/, '_800$1') %> 800w,
+                <%= imageSrc %> 1200w
+              "
+              sizes="(max-width: 768px) 100vw, 300px"
+              loading="lazy"
+              alt="<%= prop.titulo %>"
+              class="property-thumb"
+            />
           </div>
 
           <!-- Contenido -->

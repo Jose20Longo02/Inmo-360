@@ -129,12 +129,13 @@ const uploadS3 = multer({
 
 
 
-// Función para subir un buffer a Spaces usando s3v2
+// Función para subir un buffer a Spaces usando s3v2, generando variantes WebP
 async function processAndUploadToSpacesBuffer(buffer, originalName, userUuid, fieldName) {
   const ext = path.extname(originalName).toLowerCase();
   let finalBuffer = buffer;
   let finalExt = ext;
-  // convertir HEIC a JPEG si aplica
+
+  // 1) Convertir HEIC a JPEG si aplica
   if (ext === '.heic' || ext === '.heif') {
     try {
       const outputBuffer = await heicConvert({
@@ -149,42 +150,58 @@ async function processAndUploadToSpacesBuffer(buffer, originalName, userUuid, fi
       // fallback mantiene buffer original/ext original
     }
   }
-  // decidir nombre en Spaces
+
+  // 2) Decidir nombre en Spaces
   const timestamp = Date.now();
   let filenameBase;
-  if (fieldName === 'profilePic') filenameBase = `profile-${timestamp}`;
-  else if (fieldName === 'idFront') filenameBase = `idFront-${timestamp}`;
-  else if (fieldName === 'idBack')  filenameBase = `idBack-${timestamp}`;
-  else filenameBase = `${timestamp}`;
-  const key = `usuarios/${userUuid}/${filenameBase}${finalExt}`;
+  if (fieldName === 'profilePic')      filenameBase = `profile-${timestamp}`;
+  else if (fieldName === 'idFront')    filenameBase = `idFront-${timestamp}`;
+  else if (fieldName === 'idBack')     filenameBase = `idBack-${timestamp}`;
+  else                                  filenameBase = `${timestamp}`;
+  const keyBase = `usuarios/${userUuid}/${filenameBase}${finalExt}`;
 
-  // Verificar que la variable de entorno SPACES_BUCKET esté definida
-  const bucketName = process.env.SPACES_BUCKET;
-  if (!bucketName) {
-    throw new Error('SPACES_BUCKET no está definido en las variables de entorno');
-  }
+  // 3) Verificar variable de entorno
+  const Bucket = process.env.SPACES_BUCKET;
+  if (!Bucket) throw new Error('SPACES_BUCKET no está definido en las variables de entorno');
 
-  // subir a Spaces usando s3v2
-  try {
-    console.log(`⛅ Subiendo a Spaces: bucket=${bucketName}, key=${key}`);
+  // 4) Generar y subir variantes WebP en 300px y 600px
+  const widths = [300, 600];
+  await Promise.all(widths.map(async w => {
+    const bufW = await sharp(finalBuffer)
+      .resize({ width: w, withoutEnlargement: true })
+      .toFormat('webp', { quality: 80 })
+      .toBuffer();
+    const keyW = keyBase.replace(/(\.\w+)$/, `_${w}.webp`);
     await s3v2.putObject({
-      Bucket: bucketName,
-      Key: key,
+      Bucket,
+      Key: keyW,
+      Body: bufW,
+      ACL: 'public-read',
+      ContentType: 'image/webp'
+    }).promise();
+  }));
+
+  // 5) Subir la imagen original (o convertida) en su formato normal
+  try {
+    console.log(`⛅ Subiendo a Spaces: bucket=${Bucket}, key=${keyBase}`);
+    await s3v2.putObject({
+      Bucket,
+      Key: keyBase,
       Body: finalBuffer,
       ACL: 'public-read',
-      ContentType: `image/${finalExt.replace(/^\./,'')}`
+      ContentType: `image/${finalExt.replace(/^\./, '')}`
     }).promise();
   } catch (err) {
-    // Si es NoSuchBucket, loguear con más detalle
     if (err.code === 'NoSuchBucket') {
-      console.error(`Bucket no encontrado: ${bucketName}`, err);
+      console.error(`Bucket no encontrado: ${Bucket}`, err);
     } else {
       console.error('Error subiendo a Spaces:', err);
     }
     throw err;
   }
-  // URL pública
-  return `https://${bucketName}.${process.env.SPACES_ENDPOINT}/${key}`;
+
+  // 6) Devolver URL pública de la variante original
+  return `https://${Bucket}.${process.env.SPACES_ENDPOINT}/${keyBase}`;
 }
 
 async function deleteFromSpacesByUrl(url) {
@@ -1304,7 +1321,6 @@ app.get('/admin/stats/agencies', requireAdmin, async (req, res) => {
     res.status(500).send('Error al cargar estadísticas de inmobiliarias');
   }
 });
-
 
 
 
