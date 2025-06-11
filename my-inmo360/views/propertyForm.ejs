@@ -10,6 +10,7 @@
 <script>
 document.addEventListener('DOMContentLoaded', () => {
   const form         = document.querySelector('.compact-form-container form');
+  form.noValidate     = true; // desactiva required nativo
   const submitBtn    = form.querySelector('button[type="submit"]');
   const modal        = document.getElementById('publishing-modal');
   const imgInput     = document.getElementById('imagenes');
@@ -17,24 +18,24 @@ document.addEventListener('DOMContentLoaded', () => {
   const tipoSelect   = document.getElementById('tipo_propiedad');
 
   form.addEventListener('submit', (e) => {
-    // 1) Validar al menos una imagen
-    if (!imgInput.files.length) {
+    // 1) validar imágenes
+    if (imgInput.files.length === 0) {
       e.preventDefault();
       alert('Debes subir al menos una imagen');
       return;
     }
-    // 2) Si es terreno, validar que haya plano
-    if (tipoSelect.value === 'terreno' && !planoInput.files.length) {
+    // 2) si es terreno, validar plano
+    if (tipoSelect.value === 'terreno' && planoInput.files.length === 0) {
       e.preventDefault();
       alert('Debes subir plano del terreno');
       return;
     }
-    // 3) Si todo ok, mostrar modal y deshabilitar botón
+    // 3) todo ok → mostrar modal y deshabilitar botón
     modal.classList.remove('modal-hidden');
     modal.classList.add('modal-visible');
-    submitBtn.disabled = true;
+    submitBtn.disabled   = true;
     submitBtn.textContent = 'Publicando...';
-    // deja que el form siga su submit
+    // deja que el form se envíe
   });
 });
 </script>
