@@ -78,7 +78,7 @@
         </div>
         <div class="input-group">
           <label for="m2_construccion">m² de Construcción</label>
-          <input type="number" name="m2_construccion" id="m2_construccion" value="<%= property ? property.m2_construccion : '' %>" required>
+          <input type="number" step="0.01" inputmode="decimal" name="m2_construccion" id="m2_construccion" value="<%= property ? property.m2_construccion : '' %>" required>
         </div>
         <div class="input-group">
           <label for="m2_terreno">m² de Terreno</label>
@@ -155,7 +155,7 @@
       <h3 class="section-title">Características del Terreno</h3>
       <div class="input-group">
         <label for="tamano_terreno">Tamaño del terreno (m²)</label>
-        <input type="number" name="tamano_terreno" id="tamano_terreno" value="<%= property ? property.tamano_terreno : '' %>" required>
+        <input type="number" step="0.01" inputmode="decimal" name="tamano_terreno" id="tamano_terreno" value="<%= property ? property.tamano_terreno : '' %>" required>
       </div>
       <div class="input-group">
         <fieldset class="compact-fieldset">
@@ -170,7 +170,7 @@
           </label>
           <div id="frente-calle" style="display:none;">
             <label for="metros_frente">Metros de frente</label>
-            <input type="number" name="metros_frente" id="metros_frente" value="<%= property ? property.metros_frente : '' %>">
+            <input type="number" step="0.01" inputmode="decimal" name="metros_frente" id="metros_frente" value="<%= property ? property.metros_frente : '' %>">
           </div>
         </fieldset>
       </div>
@@ -180,7 +180,7 @@
   <h3 class="section-title">Características de la Bodega</h3>
   <div class="input-group">
     <label for="bodega_tamano">Tamaño total (m²)</label>
-    <input type="number" name="bodega_tamano" id="bodega_tamano">
+    <input type="number" step="0.01" inputmode="decimal" name="bodega_tamano" id="bodega_tamano">
   </div>
   <div class="input-group">
     <label for="bodega_altura">Altura (m)</label>
@@ -226,7 +226,7 @@
   <h3 class="section-title">Características del Local Comercial</h3>
   <div class="input-group">
     <label for="local_tamano">Tamaño total (m²)</label>
-    <input type="number" name="local_tamano" id="local_tamano">
+    <input type="number" step="0.01" inputmode="decimal" name="local_tamano" id="local_tamano">
   </div>
   <div class="input-group">
     <fieldset class="compact-fieldset">
