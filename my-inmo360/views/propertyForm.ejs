@@ -466,6 +466,23 @@
 
 <!-- SCRIPT: Vistas previas para imágenes con soporte HEIC/HEIF -->
 <script>
+// En tu script de Vistas previas…
+document.getElementById('video').addEventListener('change', function() {
+  const info = document.getElementById('video-info');
+  if (this.files && this.files.length) {
+    info.textContent = this.files[0].name;
+    // opcional: generar un preview en #preview-video
+    const url = URL.createObjectURL(this.files[0]);
+    document.getElementById('preview-video').innerHTML =
+      `<video controls width="200"><source src="${url}" type="${this.files[0].type}"></video>`;
+  } else {
+    info.textContent = 'Sin archivos seleccionados';
+    document.getElementById('preview-video').innerHTML = '';
+  }
+});
+
+
+
 // justo junto a los listeners de imágenes y video:
 document.getElementById('plano').addEventListener('change', function (e) {
   const file = this.files[0];
