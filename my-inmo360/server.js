@@ -2581,6 +2581,18 @@ app.post(
       );
 
       // — Notificar admins (igual que antes) …
+      const adminsRes = await pool.query(
+        `SELECT email FROM users WHERE rol = 'admin' AND email IS NOT NULL`
+      );
+      const adminEmails = adminsRes.rows.map(r => r.email);
+      if (adminEmails.length) {
+        await transporter.sendMail({
+          from: "Inmo360 <no-reply@inmo360.com>",
+          to: adminEmails,
+          subject: 'Nueva propiedad pendiente de revisión',
+          text: `El usuario ${req.session.user.username} ha subido una nueva propiedad titulada "${titulo}".`
+        });
+      }
 
       return res.redirect('/properties?submitted=true');
     } catch (err) {
