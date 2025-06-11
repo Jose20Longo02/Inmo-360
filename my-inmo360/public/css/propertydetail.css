@@ -255,8 +255,6 @@
   .property-description {
     line-height: 1.6;
     color: #333;
-    max-height: 400px;
-    overflow-y: auto;
     padding-right: 0.5rem;
   }
   
