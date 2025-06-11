@@ -156,17 +156,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function updateBadge() {
     const count = allNotifs.filter(n => !n.is_read).length;
-    if (count > 0) {
-      notifBadge.textContent  = count;
-      notifBadge.classList.remove('hidden');
-      notifBadgeM.textContent = count;
-      notifBadgeM.classList.remove('hidden');
-    } else {
-      notifBadge.textContent  = '';
-      notifBadge.classList.add('hidden');
-      notifBadgeM.textContent = '';
-      notifBadgeM.classList.add('hidden');
-    }
+    // Always show the badge with the count, even if it's 0
+    notifBadge.textContent  = count;
+    notifBadge.classList.remove('hidden');
+    notifBadgeM.textContent = count;
+    notifBadgeM.classList.remove('hidden');
   }
 
   function loadNotifs() {
@@ -181,15 +175,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function markAllRead() {
     const toMark = allNotifs.filter(n => !n.is_read).map(n => n.id);
-    if (!toMark.length) return Promise.resolve();
-    // 1) Optimistically mark local
+    if (!toMark.length) {
+      // still clear badge to 0
+      allNotifs.forEach(n => n.is_read = true);
+      renderDropdown();
+      updateBadge();
+      return Promise.resolve();
+    }
+    // Optimistically mark as read
     allNotifs.forEach(n => n.is_read = true);
     renderDropdown();
-    updateBadge(); // immediately clear badge
-    // 2) Send requests
+    updateBadge();
     return Promise.all(toMark.map(id =>
-      fetch(`/notifications/${id}/read`, { method: 'POST' })
-        .catch(console.error)
+      fetch(`/notifications/${id}/read`, { method: 'POST' }).catch(console.error)
     ));
   }
 
