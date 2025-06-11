@@ -465,257 +465,162 @@
 <script src="https://unpkg.com/heic2any/dist/heic2any.min.js"></script>
 
 <!-- SCRIPT: Vistas previas para imágenes con soporte HEIC/HEIF -->
+<!-- SCRIPT: Vistas previas para imágenes, video y plano con soporte HEIC/HEIF -->
 <script>
-// En tu script de Vistas previas…
-document.getElementById('video').addEventListener('change', function() {
-  const info = document.getElementById('video-info');
-  if (this.files && this.files.length) {
-    info.textContent = this.files[0].name;
-    // opcional: generar un preview en #preview-video
-    const url = URL.createObjectURL(this.files[0]);
-    document.getElementById('preview-video').innerHTML =
-      `<video controls width="200"><source src="${url}" type="${this.files[0].type}"></video>`;
-  } else {
-    info.textContent = 'Sin archivos seleccionados';
-    document.getElementById('preview-video').innerHTML = '';
-  }
-});
-
-
-
-// justo junto a los listeners de imágenes y video:
-document.getElementById('plano').addEventListener('change', function (e) {
-  const file = this.files[0];
-  const info = document.getElementById('plano-info');
-  const preview = document.getElementById('preview-plano');
-  // muestra el nombre
-  info.textContent = file ? file.name : 'Sin archivo seleccionado';
-  // genera preview
-  preview.innerHTML = '';
-  if (file) {
-    const img = document.createElement('img');
-    img.src = URL.createObjectURL(file);
-    img.onload = () => URL.revokeObjectURL(img.src);
-    img.style.maxWidth = '200px';
-    preview.appendChild(img);
-  }
-});
-
-
-
 document.addEventListener('DOMContentLoaded', () => {
   const imgInput         = document.getElementById('imagenes');
-  const previewContainer = document.getElementById('preview-imagenes');
+  const videoInput       = document.getElementById('video');
+  const planoInput       = document.getElementById('plano');
 
+  const previewImgs      = document.getElementById('preview-imagenes');
+  const previewVideo     = document.getElementById('preview-video');
+  const previewPlano     = document.getElementById('preview-plano');
+
+  const infoImgs         = document.getElementById('imagenes-info');
+  const infoVideo        = document.getElementById('video-info');
+  const infoPlano        = document.getElementById('plano-info');
+
+  // ————— Imágenes —————
   let currentFiles = [];
-  let previewURLs  = []; // ⇨ almacenará los objectURLs
+  let previewURLs  = [];
 
-  // Convierte HEIC/HEIF a JPEG y retorna un objectURL
+  function updateInputFiles() {
+    const dt = new DataTransfer();
+    currentFiles.forEach(f => dt.items.add(f));
+    imgInput.files = dt.files;
+    infoImgs.textContent = currentFiles.length
+      ? `${currentFiles.length} archivo(s) seleccionado(s)`
+      : 'Sin archivos seleccionados';
+  }
+
   async function getPreviewURL(file) {
     let blob = file;
     const isHeic = /heic|heif/i.test(file.type) || /\.heic$/i.test(file.name);
     if (isHeic) {
-      try {
-        blob = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.8 });
-      } catch (err) {
-        console.warn('Error convirtiendo HEIC, usando original:', err);
-      }
+      try { blob = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.8 }); }
+      catch(err){ console.warn('HEIC→JPEG falló, usando original', err); }
     }
     return URL.createObjectURL(blob);
   }
 
-  // Mantén imgInput.files sincronizado con currentFiles[]
-  function updateInputFiles() {
-    const dt = new DataTransfer();
-    currentFiles.forEach(f => dt.items.add(f));
-    imgInput.files = dt.files;
-  }
+  function renderImgs() {
+    previewImgs.innerHTML = '';
+    previewURLs.forEach((url, i) => {
+      const wr = document.createElement('div');
+      wr.className = 'preview-item';
 
-  // Pinta las miniaturas reutilizando previewURLs[]
-  function renderSlots() {
-    previewContainer.innerHTML = '';
-    for (let i = 0; i < currentFiles.length; i++) {
-      const wrapper = document.createElement('div');
-      wrapper.className = 'preview-item';
+      // Badge
+      const bd = document.createElement('span');
+      bd.className = 'order-label';
+      bd.innerText = i + 1;
+      wr.appendChild(bd);
 
-      // Número
-      const badge = document.createElement('span');
-      badge.className = 'order-label';
-      badge.innerText = i + 1;
-      wrapper.appendChild(badge);
-
-      // Flechas
+      // Arrows
       const ctr = document.createElement('div');
       ctr.className = 'arrow-controls';
-      const up = document.createElement('button');
-      up.type = 'button'; up.innerText = '▲'; up.disabled = i === 0;
-      up.onclick = e => {
+      const btnUp = document.createElement('button');
+      btnUp.type = 'button'; btnUp.innerText = '▲'; btnUp.disabled = i === 0;
+      btnUp.onclick = e => {
         e.stopPropagation();
         [currentFiles[i-1], currentFiles[i]] = [currentFiles[i], currentFiles[i-1]];
         [previewURLs[i-1], previewURLs[i]]   = [previewURLs[i], previewURLs[i-1]];
         updateInputFiles();
-        renderSlots();
+        renderImgs();
       };
-      const down = document.createElement('button');
-      down.type = 'button'; down.innerText = '▼'; down.disabled = i === currentFiles.length - 1;
-      down.onclick = e => {
+      const btnDn = document.createElement('button');
+      btnDn.type = 'button'; btnDn.innerText = '▼'; btnDn.disabled = i === previewURLs.length - 1;
+      btnDn.onclick = e => {
         e.stopPropagation();
         [currentFiles[i], currentFiles[i+1]] = [currentFiles[i+1], currentFiles[i]];
         [previewURLs[i], previewURLs[i+1]]   = [previewURLs[i+1], previewURLs[i]];
         updateInputFiles();
-        renderSlots();
+        renderImgs();
       };
-      ctr.appendChild(up);
-      ctr.appendChild(down);
-      wrapper.appendChild(ctr);
+      ctr.appendChild(btnUp);
+      ctr.appendChild(btnDn);
+      wr.appendChild(ctr);
 
-      // Eliminar
-      const rem = document.createElement('button');
-      rem.type = 'button';
-      rem.className = 'remove-preview';
-      rem.innerText = '×';
-      rem.onclick = e => {
+      // Remove
+      const rm = document.createElement('button');
+      rm.type = 'button'; rm.className = 'remove-preview'; rm.innerText = '×';
+      rm.onclick = e => {
         e.stopPropagation();
         URL.revokeObjectURL(previewURLs[i]);
-        currentFiles.splice(i, 1);
-        previewURLs.splice(i, 1);
+        currentFiles.splice(i,1);
+        previewURLs.splice(i,1);
         updateInputFiles();
-        renderSlots();
+        renderImgs();
       };
-      wrapper.appendChild(rem);
+      wr.appendChild(rm);
 
-      // Imagen
-      const imgEl = document.createElement('img');
-      imgEl.className = 'preview-img';
-      imgEl.src = previewURLs[i];
-      wrapper.appendChild(imgEl);
+      // Image
+      const img = document.createElement('img');
+      img.className = 'preview-img';
+      img.src = url;
+      wr.appendChild(img);
 
-      previewContainer.appendChild(wrapper);
-    }
+      previewImgs.appendChild(wr);
+    });
   }
 
-  // Cuando cambian los archivos: conviértelos **una vez** y pinta
   imgInput.addEventListener('change', async () => {
-    // revoca URLs previas
+    // cleanup antiguos URLs
     previewURLs.forEach(u => URL.revokeObjectURL(u));
     currentFiles = Array.from(imgInput.files);
     previewURLs  = await Promise.all(currentFiles.map(f => getPreviewURL(f)));
     updateInputFiles();
-    renderSlots();
+    renderImgs();
   });
 
-  // Si ya había archivos (edición)
+  // inicializar si ya había archivos
   if (imgInput.files.length) {
-    currentFiles = Array.from(imgInput.files);
     (async () => {
-      previewURLs = await Promise.all(currentFiles.map(f => getPreviewURL(f)));
-      renderSlots();
+      currentFiles = Array.from(imgInput.files);
+      previewURLs  = await Promise.all(currentFiles.map(f => getPreviewURL(f)));
+      updateInputFiles();
+      renderImgs();
     })();
   }
-});
-  const imgInput        = document.getElementById('imagenes');
-  const previewContainer = document.getElementById('preview-imagenes');
-  let currentFiles = [];
 
-  // Sincroniza imgInput.files con currentFiles[]
-  function updateInputFiles() {
-    const dt = new DataTransfer();
-    currentFiles.forEach(f => dt.items.add(f));
-    imgInput.files = dt.files;
-  }
-
-  // Convierte HEIC/HEIF a blob JPEG en cliente
-  async function convertHeic(file) {
-    try {
-      return await heic2any({
-        blob: file,
-        toType: 'image/jpeg',
-        quality: 0.8
-      });
-    } catch (err) {
-      console.error('Error convirtiendo HEIC:', err);
-      return file; // fallback
+  // ————— Video —————
+  videoInput.addEventListener('change', () => {
+    previewVideo.innerHTML = '';
+    if (videoInput.files.length) {
+      const file = videoInput.files[0];
+      infoVideo.textContent = file.name;
+      const url = URL.createObjectURL(file);
+      const vid = document.createElement('video');
+      vid.controls = true; vid.width = 200;
+      vid.src = url;
+      vid.onloadeddata = () => URL.revokeObjectURL(url);
+      previewVideo.appendChild(vid);
+    } else {
+      infoVideo.textContent = 'Sin archivos seleccionados';
     }
-  }
-
-  // Dibuja N slots numerados y genera previews
-  async function renderSlots() {
-    previewContainer.innerHTML = '';
-    for (let i = 0; i < currentFiles.length; i++) {
-      let file = currentFiles[i];
-      const wrapper = document.createElement('div');
-      wrapper.className = 'preview-item';
-
-      // Nº de orden
-      const badge = document.createElement('span');
-      badge.className = 'order-label';
-      badge.innerText = i + 1;
-      wrapper.appendChild(badge);
-
-      // Flechas para ordenar
-      const ctr = document.createElement('div');
-      ctr.className = 'arrow-controls';
-      const up = document.createElement('button');
-      up.type = 'button'; up.innerText = '▲'; up.disabled = i===0;
-      up.addEventListener('click', e => {
-        e.stopPropagation();
-        [currentFiles[i-1], currentFiles[i]] = [currentFiles[i], currentFiles[i-1]];
-        updateInputFiles();
-        renderSlots();
-      });
-      const down = document.createElement('button');
-      down.type = 'button'; down.innerText = '▼'; down.disabled = i===currentFiles.length-1;
-      down.addEventListener('click', e => {
-        e.stopPropagation();
-        [currentFiles[i], currentFiles[i+1]] = [currentFiles[i+1], currentFiles[i]];
-        updateInputFiles();
-        renderSlots();
-      });
-      ctr.appendChild(up);
-      ctr.appendChild(down);
-      wrapper.appendChild(ctr);
-
-      // Botón eliminar
-      const rem = document.createElement('button');
-      rem.type = 'button'; rem.className = 'remove-preview'; rem.innerText = '×';
-      rem.addEventListener('click', e => {
-        e.stopPropagation();
-        currentFiles.splice(i,1);
-        updateInputFiles();
-        renderSlots();
-      });
-      wrapper.appendChild(rem);
-
-      // Generar miniatura (incluye conversión HEIC si hace falta)
-      const imgEl = document.createElement('img');
-      imgEl.className = 'preview-img';
-      let blob = file;
-      const isHeic = file.type==='image/heic'||file.type==='image/heif'
-                   || /\.heic$/i.test(file.name)|| /\.heif$/i.test(file.name);
-      if (isHeic) {
-        blob = await convertHeic(file);
-      }
-      const reader = new FileReader();
-      reader.onload = e => imgEl.src = e.target.result;
-      reader.readAsDataURL(blob);
-      wrapper.appendChild(imgEl);
-
-      previewContainer.appendChild(wrapper);
-    }
-  }
-
-  // Al cambiar selección
-  imgInput.addEventListener('change', async () => {
-    currentFiles = Array.from(imgInput.files);
-    updateInputFiles();
-    await renderSlots();
   });
 
-  // Si ya hay archivos (edición)
-  if (imgInput.files.length) {
-    currentFiles = Array.from(imgInput.files);
-    renderSlots();
-  }
+  // ————— Plano —————
+  planoInput.addEventListener('change', async () => {
+    previewPlano.innerHTML = '';
+    if (planoInput.files.length) {
+      const file = planoInput.files[0];
+      infoPlano.textContent = file.name;
+      // soporta HEIC
+      let blob = file;
+      const isHeic = /heic|heif/i.test(file.type) || /\.heic$/i.test(file.name);
+      if (isHeic) {
+        try { blob = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.8 }); }
+        catch(err){ console.warn('HEIC plano→JPEG falló', err); }
+      }
+      const url = URL.createObjectURL(blob);
+      const img = document.createElement('img');
+      img.src = url; img.style.maxWidth = '200px';
+      img.onload = () => URL.revokeObjectURL(url);
+      previewPlano.appendChild(img);
+    } else {
+      infoPlano.textContent = 'Sin archivo seleccionado';
+    }
+  });
 });
 </script>
 
