@@ -72,7 +72,7 @@ function fileFilter(req, file, cb) {
   }
 }
 
-const limits = { fileSize: 8 * 1024 * 1024 }; // 8 MB
+const limits = { fileSize: 30 * 1024 * 1024 };
 
 // Middleware de subida en memoria (para procesar buffer antes de subir a Spaces)
 const uploadMemory = multer({
@@ -121,6 +121,8 @@ const uploadS3 = multer({
   fileFilter,
   limits,
 });
+
+
 
 
 
