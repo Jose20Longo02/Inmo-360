@@ -2442,32 +2442,30 @@ app.post(
         return res.status(400).send('Precio inválido');
       }
 
-      // Procesar imágenes
+      // — Procesar imágenes —
       const imagenFiles = req.files['imagenes'] || [];
       const imagenes_urls = [];
-      // Subir cada imagen en memoria a Spaces
       for (const file of imagenFiles) {
-        // file.buffer está disponible gracias a uploadMemory
-        const prefix = `propiedades/${folderUuid}`;
         try {
-          const url = await uploadBufferToSpaces(file.buffer, file.originalname, prefix);
+          // Aquí usamos la función optimizada que sube original + webp
+          const url = await processAndUploadToSpacesBuffer(
+            file.buffer,
+            file.originalname,
+            folderUuid,
+            'imagen'
+          );
           imagenes_urls.push(url);
         } catch (errUpload) {
           console.error('Error subiendo imagen en propiedades:', errUpload);
-          // puedes optar por abortar todo o continuar sin esta imagen. Aquí continuamos con las que suban.
         }
       }
 
-      // Procesar video (si es imagen o buffer): 
-      // Supongo que el campo "video" es un archivo de video. Si quieres subirlo también en memoria:
+      // — Procesar video —
       let video_url = null;
       if (req.files['video'] && req.files['video'][0]) {
         const file = req.files['video'][0];
-        // subimos en memoria. Nota: si videos son grandes >8MB, este middleware falla; en tal caso necesitarías otro enfoque.
         try {
-          const prefix = `propiedades/${folderUuid}`;
-          // Simplemente subimos sin conversión:
-          const keyVid = makeS3Key(prefix, file.originalname);
+          const keyVid = makeS3Key(`propiedades/${folderUuid}`, file.originalname);
           await s3v2.putObject({
             Bucket: process.env.SPACES_BUCKET,
             Key: keyVid,
@@ -2481,21 +2479,18 @@ app.post(
         }
       }
 
-      // Procesar plano (similar a video)
+      // — Procesar plano —
       let plano_url = null;
       if (req.files['plano'] && req.files['plano'][0]) {
         const file = req.files['plano'][0];
         try {
-          const prefix = `propiedades/${folderUuid}`;
-          const keyPlano = makeS3Key(prefix, file.originalname);
-          await s3v2.putObject({
-            Bucket: process.env.SPACES_BUCKET,
-            Key: keyPlano,
-            Body: file.buffer,
-            ACL: 'public-read',
-            ContentType: file.mimetype || 'application/octet-stream'
-          }).promise();
-          plano_url = `https://${process.env.SPACES_BUCKET}.${process.env.SPACES_ENDPOINT}/${keyPlano}`;
+          // también optimizado para imagenes (ese HEIC → JPEG + webp)
+          plano_url = await processAndUploadToSpacesBuffer(
+            file.buffer,
+            file.originalname,
+            folderUuid,
+            'plano'
+          );
         } catch (errPlano) {
           console.error('Error subiendo plano:', errPlano);
         }
@@ -2542,12 +2537,8 @@ app.post(
           JSON.stringify(caracteristicas_terreno),
           req.body.bodega_tamano ? parseFloat(req.body.bodega_tamano) : null,
           req.body.bodega_altura ? parseFloat(req.body.bodega_altura) : null,
-          req.body.cantidad_oficinas
-            ? parseInt(req.body.cantidad_oficinas, 10)
-            : null,
-          req.body.cantidad_banos
-            ? parseInt(req.body.cantidad_banos, 10)
-            : null,
+          req.body.cantidad_oficinas ? parseInt(req.body.cantidad_oficinas, 10) : null,
+          req.body.cantidad_banos     ? parseInt(req.body.cantidad_banos, 10)     : null,
           JSON.stringify(caracteristicas_bodega),
           req.body.local_tamano ? parseFloat(req.body.local_tamano) : null,
           JSON.stringify(caracteristicas_local),
@@ -2563,9 +2554,12 @@ app.post(
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/^-+|-+$/g, '');
       const finalSlug = `${rawSlug}-${newId}`;
-      await pool.query('UPDATE propiedades SET slug = $1 WHERE id = $2', [finalSlug, newId]);
+      await pool.query(
+        'UPDATE propiedades SET slug = $1 WHERE id = $2',
+        [finalSlug, newId]
+      );
 
-      // Notificar admins si quieres...
+      // Notificar admins
       const adminsRes = await pool.query(
         `SELECT email FROM users WHERE rol = 'admin' AND email IS NOT NULL`
       );
