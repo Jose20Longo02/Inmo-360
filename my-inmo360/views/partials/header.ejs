@@ -137,65 +137,74 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-  // Elementos de desktop
-  const notifBtn    = document.getElementById('notif-button');
-  const notifBadge  = document.getElementById('notif-badge');
-  const notifDrop   = document.getElementById('notif-dropdown');
-  // Elementos de mobile
-  const notifBtnM   = document.getElementById('notif-button-mobile');
-  const notifBadgeM = document.getElementById('notif-badge-mobile');
-  const notifDropM  = document.getElementById('notif-dropdown-mobile');
+  const notifBtn     = document.getElementById('notif-button');
+  const notifBadge   = document.getElementById('notif-badge');
+  const notifDrop    = document.getElementById('notif-dropdown');
+  const notifBtnM    = document.getElementById('notif-button-mobile');
+  const notifBadgeM  = document.getElementById('notif-badge-mobile');
+  const notifDropM   = document.getElementById('notif-dropdown-mobile');
 
   let allNotifs = [];
 
-  // Carga inicial de notificaciones
+  // Renderiza las notificaciones en los dropdowns
+  function renderDropdown() {
+    const items = allNotifs.map(n =>
+      `<li class="${n.is_read ? '' : 'unread'}" data-id="${n.id}">${n.message}</li>`
+    ).join('');
+    notifDrop.innerHTML  = items;
+    notifDropM.innerHTML = items;
+  }
+
+  // Actualiza el badge con el conteo de no leídas
+  function updateBadge() {
+    const count = allNotifs.filter(n => !n.is_read).length;
+    if (count > 0) {
+      notifBadge.textContent  = count;
+      notifBadge.classList.remove('hidden');
+      notifBadgeM.textContent = count;
+      notifBadgeM.classList.remove('hidden');
+    } else {
+      notifBadge.classList.add('hidden');
+      notifBadgeM.classList.add('hidden');
+    }
+  }
+
+  // Carga las últimas 5 notificaciones
   function loadNotifs() {
     return fetch('/notifications')
       .then(res => res.json())
       .then(items => {
-        allNotifs = items;
-        const unread = items.filter(n => !n.is_read);
-        if (unread.length) {
-          notifBadge.textContent  = unread.length;
-          notifBadge.classList.remove('hidden');
-          notifBadgeM.textContent = unread.length;
-          notifBadgeM.classList.remove('hidden');
-        }
-        const lis = items.map(n =>
-          `<li class="${n.is_read ? '' : 'unread'}" data-id="${n.id}">${n.message}</li>`
-        ).join('');
-        notifDrop.innerHTML  = lis;
-        notifDropM.innerHTML = lis;
+        allNotifs = items.slice(0, 5);
+        renderDropdown();
+        updateBadge();
       });
   }
 
-  // Marca todos como leídos
+  // Marca todas las notificaciones actuales como leídas
   function markAllRead() {
     const toMark = allNotifs.filter(n => !n.is_read).map(n => n.id);
+    if (toMark.length === 0) return Promise.resolve();
     return Promise.all(toMark.map(id =>
       fetch(`/notifications/${id}/read`, { method: 'POST' })
     )).then(() => {
-      notifBadge.classList.add('hidden');
-      notifBadgeM.classList.add('hidden');
-      // actualizar en UI
-      notifDrop.querySelectorAll('li.unread').forEach(li => li.classList.remove('unread'));
-      notifDropM.querySelectorAll('li.unread').forEach(li => li.classList.remove('unread'));
+      allNotifs.forEach(n => n.is_read = true);
+      renderDropdown();
+      updateBadge();
     });
   }
 
-  // Inicializar
+  // Inicializa
   loadNotifs();
 
-  // Handler abertura desktop
+  // Al abrir la campana desktop
   notifBtn && notifBtn.addEventListener('click', e => {
     e.stopPropagation();
-    // marcar y mostrar
     markAllRead().then(() => {
       notifDrop.classList.toggle('hidden');
     });
   });
 
-  // Handler abertura mobile
+  // Al abrir la campana mobile
   notifBtnM && notifBtnM.addEventListener('click', e => {
     e.stopPropagation();
     markAllRead().then(() => {
@@ -203,13 +212,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // Cerrar al click fuera
+  // Cerrar dropdowns al hacer clic fuera
   document.addEventListener('click', () => {
     notifDrop.classList.add('hidden');
     notifDropM.classList.add('hidden');
   });
 
-  // Click en notificación: solo cierra
+  // Clic en notificación: sólo cierra, no navega
   [notifDrop, notifDropM].forEach(drop => {
     drop && drop.addEventListener('click', e => {
       const li = e.target.closest('li[data-id]');
