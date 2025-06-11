@@ -643,5 +643,18 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const form = document.querySelector('form[action="/properties/new"]');
+  const submitBtn = form.querySelector('button[type="submit"]');
+
+  form.addEventListener('submit', () => {
+    // Deshabilita el botón para evitar múltiples envíos
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Publicando...';
+  });
+});
+</script>
+
 
 
