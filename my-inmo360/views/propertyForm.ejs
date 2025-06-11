@@ -9,18 +9,32 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-  const form       = document.querySelector('.compact-form-container form');
-  const submitBtn  = form.querySelector('button[type="submit"]');
-  const modal      = document.getElementById('publishing-modal');
+  const form         = document.querySelector('.compact-form-container form');
+  const submitBtn    = form.querySelector('button[type="submit"]');
+  const modal        = document.getElementById('publishing-modal');
+  const imgInput     = document.getElementById('imagenes');
+  const planoInput   = document.getElementById('plano');
+  const tipoSelect   = document.getElementById('tipo_propiedad');
 
   form.addEventListener('submit', (e) => {
-    // Mostrar nuestro modal
+    // 1) Validar al menos una imagen
+    if (!imgInput.files.length) {
+      e.preventDefault();
+      alert('Debes subir al menos una imagen');
+      return;
+    }
+    // 2) Si es terreno, validar que haya plano
+    if (tipoSelect.value === 'terreno' && !planoInput.files.length) {
+      e.preventDefault();
+      alert('Debes subir plano del terreno');
+      return;
+    }
+    // 3) Si todo ok, mostrar modal y deshabilitar botón
     modal.classList.remove('modal-hidden');
     modal.classList.add('modal-visible');
-    // Deshabilitar botón para evitar doble click
     submitBtn.disabled = true;
     submitBtn.textContent = 'Publicando...';
-    // Deja que el form se envíe normalmente
+    // deja que el form siga su submit
   });
 });
 </script>
