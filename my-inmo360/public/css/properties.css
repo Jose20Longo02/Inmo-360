@@ -12,13 +12,6 @@
   margin: 2rem auto;
   padding: 0 1rem;
   color: #000;
-
-  /* NUEVO: forzar alineación arriba-izquierda */
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: flex-start;
-  min-height: 60vh; /* opcional, para dar un poco de “espacio” si no hay grid */
 }
 
 /* Header */
@@ -26,8 +19,9 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin: 2rem 0;   /* unifica top y bottom */
-  width: 100%;      /* para que el justify-content funcione siempre */
+  margin-bottom: 2rem;
+  margin-top: 50px;
+  min-width: 700;
 }
 
 .page-title {
