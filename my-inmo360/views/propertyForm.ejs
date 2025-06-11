@@ -466,7 +466,6 @@
 
 <!-- SCRIPT: Vistas previas para imágenes con soporte HEIC/HEIF -->
 <!-- SCRIPT: Vistas previas para imágenes, video y plano con soporte HEIC/HEIF -->
-<!-- SCRIPT: Previews optimizados para imágenes, video y plano -->
 <script>
 document.addEventListener('DOMContentLoaded', () => {
   const imgInput    = document.getElementById('imagenes');
@@ -565,23 +564,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
       previewImgs.appendChild(wr);
     });
+    // re-enable the choose button after previews rendered
+    imgInput.disabled = false;
   }
 
+  // initialize selection info immediately
+  updateInputFiles();
+
   imgInput.addEventListener('change', async () => {
-    // mostrar indicador
-    previewImgs.innerHTML = '<p>Cargando imágenes...</p>';
-    // liberar URLs previos
+    // disable input while loading
+    imgInput.disabled = true;
+    // show loading indicator
+    previewImgs.innerHTML = '<p style="font-size:1.2rem;font-weight:bold;">Cargando imágenes...</p>';
+    // cleanup old URLs
     previewURLs.forEach(u => URL.revokeObjectURL(u));
     currentFiles = Array.from(imgInput.files);
+    // generate previews
     previewURLs  = await Promise.all(currentFiles.map(f => getPreviewURL(f)));
     updateInputFiles();
     renderImgs();
   });
 
-  // inicializar si ya había archivos (edición)
+  // initialize if editing
   if (imgInput.files.length) {
     (async () => {
-      previewImgs.innerHTML = '<p>Cargando imágenes...</p>';
+      imgInput.disabled = true;
+      previewImgs.innerHTML = '<p style="font-size:1.2rem;font-weight:bold;">Cargando imágenes...</p>';
       currentFiles = Array.from(imgInput.files);
       previewURLs  = await Promise.all(currentFiles.map(f => getPreviewURL(f)));
       updateInputFiles();
