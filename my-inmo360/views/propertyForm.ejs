@@ -504,6 +504,115 @@ document.getElementById('plano').addEventListener('change', function (e) {
 
 
 document.addEventListener('DOMContentLoaded', () => {
+  const imgInput         = document.getElementById('imagenes');
+  const previewContainer = document.getElementById('preview-imagenes');
+
+  let currentFiles = [];
+  let previewURLs  = []; // ⇨ almacenará los objectURLs
+
+  // Convierte HEIC/HEIF a JPEG y retorna un objectURL
+  async function getPreviewURL(file) {
+    let blob = file;
+    const isHeic = /heic|heif/i.test(file.type) || /\.heic$/i.test(file.name);
+    if (isHeic) {
+      try {
+        blob = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.8 });
+      } catch (err) {
+        console.warn('Error convirtiendo HEIC, usando original:', err);
+      }
+    }
+    return URL.createObjectURL(blob);
+  }
+
+  // Mantén imgInput.files sincronizado con currentFiles[]
+  function updateInputFiles() {
+    const dt = new DataTransfer();
+    currentFiles.forEach(f => dt.items.add(f));
+    imgInput.files = dt.files;
+  }
+
+  // Pinta las miniaturas reutilizando previewURLs[]
+  function renderSlots() {
+    previewContainer.innerHTML = '';
+    for (let i = 0; i < currentFiles.length; i++) {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'preview-item';
+
+      // Número
+      const badge = document.createElement('span');
+      badge.className = 'order-label';
+      badge.innerText = i + 1;
+      wrapper.appendChild(badge);
+
+      // Flechas
+      const ctr = document.createElement('div');
+      ctr.className = 'arrow-controls';
+      const up = document.createElement('button');
+      up.type = 'button'; up.innerText = '▲'; up.disabled = i === 0;
+      up.onclick = e => {
+        e.stopPropagation();
+        [currentFiles[i-1], currentFiles[i]] = [currentFiles[i], currentFiles[i-1]];
+        [previewURLs[i-1], previewURLs[i]]   = [previewURLs[i], previewURLs[i-1]];
+        updateInputFiles();
+        renderSlots();
+      };
+      const down = document.createElement('button');
+      down.type = 'button'; down.innerText = '▼'; down.disabled = i === currentFiles.length - 1;
+      down.onclick = e => {
+        e.stopPropagation();
+        [currentFiles[i], currentFiles[i+1]] = [currentFiles[i+1], currentFiles[i]];
+        [previewURLs[i], previewURLs[i+1]]   = [previewURLs[i+1], previewURLs[i]];
+        updateInputFiles();
+        renderSlots();
+      };
+      ctr.appendChild(up);
+      ctr.appendChild(down);
+      wrapper.appendChild(ctr);
+
+      // Eliminar
+      const rem = document.createElement('button');
+      rem.type = 'button';
+      rem.className = 'remove-preview';
+      rem.innerText = '×';
+      rem.onclick = e => {
+        e.stopPropagation();
+        URL.revokeObjectURL(previewURLs[i]);
+        currentFiles.splice(i, 1);
+        previewURLs.splice(i, 1);
+        updateInputFiles();
+        renderSlots();
+      };
+      wrapper.appendChild(rem);
+
+      // Imagen
+      const imgEl = document.createElement('img');
+      imgEl.className = 'preview-img';
+      imgEl.src = previewURLs[i];
+      wrapper.appendChild(imgEl);
+
+      previewContainer.appendChild(wrapper);
+    }
+  }
+
+  // Cuando cambian los archivos: conviértelos **una vez** y pinta
+  imgInput.addEventListener('change', async () => {
+    // revoca URLs previas
+    previewURLs.forEach(u => URL.revokeObjectURL(u));
+    currentFiles = Array.from(imgInput.files);
+    previewURLs  = await Promise.all(currentFiles.map(f => getPreviewURL(f)));
+    updateInputFiles();
+    renderSlots();
+  });
+
+  // Si ya había archivos (edición)
+  if (imgInput.files.length) {
+    currentFiles = Array.from(imgInput.files);
+    (async () => {
+      previewURLs = await Promise.all(currentFiles.map(f => getPreviewURL(f)));
+      renderSlots();
+    })();
+  }
+});
   const imgInput        = document.getElementById('imagenes');
   const previewContainer = document.getElementById('preview-imagenes');
   let currentFiles = [];
