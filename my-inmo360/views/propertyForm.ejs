@@ -7,7 +7,6 @@
 </head>
 <%- include('partials/header') %>
 
-
 <div class="compact-form-container">
   <h2 class="form-title"><%= property ? 'Editar Propiedad' : 'Nueva Propiedad' %></h2>
   <form action="<%= action %>" method="POST" enctype="multipart/form-data">
@@ -467,6 +466,26 @@
 
 <!-- SCRIPT: Vistas previas para imágenes con soporte HEIC/HEIF -->
 <script>
+// justo junto a los listeners de imágenes y video:
+document.getElementById('plano').addEventListener('change', function (e) {
+  const file = this.files[0];
+  const info = document.getElementById('plano-info');
+  const preview = document.getElementById('preview-plano');
+  // muestra el nombre
+  info.textContent = file ? file.name : 'Sin archivo seleccionado';
+  // genera preview
+  preview.innerHTML = '';
+  if (file) {
+    const img = document.createElement('img');
+    img.src = URL.createObjectURL(file);
+    img.onload = () => URL.revokeObjectURL(img.src);
+    img.style.maxWidth = '200px';
+    preview.appendChild(img);
+  }
+});
+
+
+
 document.addEventListener('DOMContentLoaded', () => {
   const imgInput        = document.getElementById('imagenes');
   const previewContainer = document.getElementById('preview-imagenes');
