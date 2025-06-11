@@ -132,57 +132,90 @@
         }
       });
     }
+  });
+</script>
 
-    // Notification Bell Desktop
-    const notifBtn = document.getElementById('notif-button');
-    const notifBadge = document.getElementById('notif-badge');
-    const notifDropdown = document.getElementById('notif-dropdown');
-    fetch('/notifications').then(res => res.json()).then(items => {
-      if (items.length) {
-        const count = items.filter(n => !n.is_read).length;
-        if (count) { notifBadge.textContent = count; notifBadge.classList.remove('hidden'); }
-        notifDropdown.innerHTML = items.map(n => `
-          <li class="${n.is_read ? '' : 'unread'}" data-id="${n.id}" data-link="${n.link}">${n.message}</li>
-        `).join('');
-      }
-    });
-    notifBtn && notifBtn.addEventListener('click', e => { e.stopPropagation(); notifDropdown.classList.toggle('hidden'); });
-    document.addEventListener('click', () => notifDropdown.classList.add('hidden'));
-    notifDropdown && notifDropdown.addEventListener('click', e => {
-      const li = e.target.closest('li[data-id]'); if (!li) return;
-      const id = li.dataset.id, link = li.dataset.link;
-      fetch(`/notifications/${id}/read`, { method: 'POST' }).then(() => {
-        li.classList.remove('unread');
-        let curr = parseInt(notifBadge.textContent || '0', 10) - 1;
-        if (curr > 0) notifBadge.textContent = curr; else notifBadge.classList.add('hidden');
-        window.location.href = link;
-      });
-    });
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // Elementos de desktop
+  const notifBtn    = document.getElementById('notif-button');
+  const notifBadge  = document.getElementById('notif-badge');
+  const notifDrop   = document.getElementById('notif-dropdown');
+  // Elementos de mobile
+  const notifBtnM   = document.getElementById('notif-button-mobile');
+  const notifBadgeM = document.getElementById('notif-badge-mobile');
+  const notifDropM  = document.getElementById('notif-dropdown-mobile');
 
-    // Notification Bell Mobile
-    const notifBtnM = document.getElementById('notif-button-mobile');
-    const notifBadgeM = document.getElementById('notif-badge-mobile');
-    const notifDropdownM = document.getElementById('notif-dropdown-mobile');
-    fetch('/notifications').then(res => res.json()).then(items => {
-      if (items.length) {
-        const count = items.filter(n => !n.is_read).length;
-        if (count) { notifBadgeM.textContent = count; notifBadgeM.classList.remove('hidden'); }
-        notifDropdownM.innerHTML = items.map(n => `
-          <li class="${n.is_read ? '' : 'unread'}" data-id="${n.id}" data-link="${n.link}">${n.message}</li>
-        `).join('');
-      }
-    });
-    notifBtnM && notifBtnM.addEventListener('click', e => { e.stopPropagation(); notifDropdownM.classList.toggle('hidden'); });
-    document.addEventListener('click', () => notifDropdownM.classList.add('hidden'));
-    notifDropdownM && notifDropdownM.addEventListener('click', e => {
-      const li = e.target.closest('li[data-id]'); if (!li) return;
-      const id = li.dataset.id, link = li.dataset.link;
-      fetch(`/notifications/${id}/read`, { method: 'POST' }).then(() => {
-        li.classList.remove('unread');
-        let curr = parseInt(notifBadgeM.textContent || '0', 10) - 1;
-        if (curr > 0) notifBadgeM.textContent = curr; else notifBadgeM.classList.add('hidden');
-        window.location.href = link;
+  let allNotifs = [];
+
+  // Carga inicial de notificaciones
+  function loadNotifs() {
+    return fetch('/notifications')
+      .then(res => res.json())
+      .then(items => {
+        allNotifs = items;
+        const unread = items.filter(n => !n.is_read);
+        if (unread.length) {
+          notifBadge.textContent  = unread.length;
+          notifBadge.classList.remove('hidden');
+          notifBadgeM.textContent = unread.length;
+          notifBadgeM.classList.remove('hidden');
+        }
+        const lis = items.map(n =>
+          `<li class="${n.is_read ? '' : 'unread'}" data-id="${n.id}">${n.message}</li>`
+        ).join('');
+        notifDrop.innerHTML  = lis;
+        notifDropM.innerHTML = lis;
       });
+  }
+
+  // Marca todos como leídos
+  function markAllRead() {
+    const toMark = allNotifs.filter(n => !n.is_read).map(n => n.id);
+    return Promise.all(toMark.map(id =>
+      fetch(`/notifications/${id}/read`, { method: 'POST' })
+    )).then(() => {
+      notifBadge.classList.add('hidden');
+      notifBadgeM.classList.add('hidden');
+      // actualizar en UI
+      notifDrop.querySelectorAll('li.unread').forEach(li => li.classList.remove('unread'));
+      notifDropM.querySelectorAll('li.unread').forEach(li => li.classList.remove('unread'));
+    });
+  }
+
+  // Inicializar
+  loadNotifs();
+
+  // Handler abertura desktop
+  notifBtn && notifBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    // marcar y mostrar
+    markAllRead().then(() => {
+      notifDrop.classList.toggle('hidden');
     });
   });
+
+  // Handler abertura mobile
+  notifBtnM && notifBtnM.addEventListener('click', e => {
+    e.stopPropagation();
+    markAllRead().then(() => {
+      notifDropM.classList.toggle('hidden');
+    });
+  });
+
+  // Cerrar al click fuera
+  document.addEventListener('click', () => {
+    notifDrop.classList.add('hidden');
+    notifDropM.classList.add('hidden');
+  });
+
+  // Click en notificación: solo cierra
+  [notifDrop, notifDropM].forEach(drop => {
+    drop && drop.addEventListener('click', e => {
+      const li = e.target.closest('li[data-id]');
+      if (!li) return;
+      drop.classList.add('hidden');
+    });
+  });
+});
 </script>
