@@ -59,26 +59,35 @@ app.use((req, res, next) => {
 // CONFIGURACIÓN MULTER
 // =========================
 
-function imageFileFilter(req, file, cb) {
-  if (file.mimetype.startsWith('image/')) cb(null, true);
-  else cb(new Error('Formato no soportado: solo imágenes'), false);
+// Ahora aceptamos videos en el campo 'video' además de imágenes en los demás.
+function fileFilter(req, file, cb) {
+  if (file.fieldname === 'video') {
+    // dejamos pasar cualquier tipo de video
+    cb(null, true);
+  } else if (file.mimetype.startsWith('image/')) {
+    // imágenes válidas
+    cb(null, true);
+  } else {
+    cb(new Error('Formato no soportado: solo imágenes o video'), false);
+  }
 }
+
 const limits = { fileSize: 8 * 1024 * 1024 }; // 8 MB
 
+// Middleware de subida en memoria (para procesar buffer antes de subir a Spaces)
 const uploadMemory = multer({
   storage: multer.memoryStorage(),
-  fileFilter: imageFileFilter,
+  fileFilter,
   limits,
 });
 
-// 2) Configurar cliente S3 v2 para DigitalOcean Spaces
+// 2) Cliente S3 v2 para DigitalOcean Spaces
 const spacesEndpoint = new AWS.Endpoint(process.env.SPACES_ENDPOINT);
 const s3v2 = new AWS.S3({
   endpoint: spacesEndpoint,
   accessKeyId: process.env.SPACES_KEY,
   secretAccessKey: process.env.SPACES_SECRET,
 });
-// Verifica en logs qué bucket y endpoint se están usando:
 console.log('⛅ SPACES_BUCKET:', process.env.SPACES_BUCKET);
 console.log('⛅ SPACES_ENDPOINT:', process.env.SPACES_ENDPOINT);
 
@@ -89,7 +98,7 @@ function makeS3Key(prefixFolder, originalName) {
   return `${prefixFolder}/${timestamp}-${baseName}`;
 }
 
-// 3) Middleware: subir directo a Spaces/S3 con multer-s3 (si lo usas en alguna ruta)
+// Middleware de subida directa a Spaces/S3 con multer-s3
 const uploadS3 = multer({
   storage: multerS3({
     s3: s3v2,
@@ -106,13 +115,17 @@ const uploadS3 = multer({
       } else {
         prefix = `temp`;
       }
-      const key = makeS3Key(prefix, file.originalname);
-      cb(null, key);
+      cb(null, makeS3Key(prefix, file.originalname));
     }
   }),
-  fileFilter: imageFileFilter,
+  fileFilter,
   limits,
 });
+
+
+
+
+
 
 // Función para subir un buffer a Spaces usando s3v2
 async function processAndUploadToSpacesBuffer(buffer, originalName, userUuid, fieldName) {
