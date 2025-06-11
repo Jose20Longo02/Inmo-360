@@ -171,7 +171,8 @@ document.addEventListener('DOMContentLoaded', () => {
     return fetch('/notifications')
       .then(res => res.json())
       .then(items => {
-        allNotifs = items.slice(0, 5);
+        // keep only latest 5
+        allNotifs = items.slice(-5).reverse();
         renderDropdown();
         updateBadge();
       });
@@ -180,28 +181,28 @@ document.addEventListener('DOMContentLoaded', () => {
   function markAllRead() {
     const toMark = allNotifs.filter(n => !n.is_read).map(n => n.id);
     if (!toMark.length) return Promise.resolve();
-    return Promise.all(toMark.map(id =>
+    // optimistically mark read
+    allNotifs.forEach(n => n.is_read = true);
+    renderDropdown();
+    updateBadge();
+    // fire off backend calls but don’t wait
+    toMark.forEach(id => {
       fetch(`/notifications/${id}/read`, { method: 'POST' })
-    )).then(() => {
-      allNotifs.forEach(n => n.is_read = true);
-      renderDropdown();
-      updateBadge();
+        .catch(console.error);
     });
+    return Promise.resolve();
   }
 
   loadNotifs();
 
-  notifBtn && notifBtn.addEventListener('click', e => {
-    e.stopPropagation();
-    markAllRead().then(() => {
-      notifDrop.classList.toggle('hidden');
-    });
-  });
-
-  notifBtnM && notifBtnM.addEventListener('click', e => {
-    e.stopPropagation();
-    markAllRead().then(() => {
-      notifDropM.classList.toggle('hidden');
+  [notifBtn, notifBtnM].forEach(btn => {
+    if (!btn) return;
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      markAllRead();
+      // toggle dropdown immediately
+      const drop = btn === notifBtn ? notifDrop : notifDropM;
+      drop.classList.toggle('hidden');
     });
   });
 
@@ -211,9 +212,11 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   [notifDrop, notifDropM].forEach(drop => {
-    drop && drop.addEventListener('click', e => {
+    if (!drop) return;
+    drop.addEventListener('click', e => {
       const li = e.target.closest('li[data-id]');
       if (!li) return;
+      // no navigation
       drop.classList.add('hidden');
     });
   });
