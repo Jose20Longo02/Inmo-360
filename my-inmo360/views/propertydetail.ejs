@@ -6,6 +6,8 @@
 </head>
 <%- include('partials/header') %>
 
+
+<div class="property-detail-container <%= property.luxo ? 'luxury' : '' %>">
     <!-- Slider Column -->
     <div class="slider-container">
       <% if (images && images.length) { %>
@@ -107,6 +109,7 @@
     </aside>
   </div>
 </div>
+
 
 <script>
   // Slider JS
