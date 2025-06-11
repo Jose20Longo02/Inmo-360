@@ -2742,7 +2742,7 @@ app.get('/properties/:slug', async (req, res) => {
     };
 
     // 7) Renderizar la vista con todos los datos
-    res.render('propertyDetail', {
+    res.render('propertydetail', {
       property,
       images,
       agent,
