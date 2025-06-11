@@ -136,7 +136,9 @@
     this.textContent = '<%= agent.email %>';
   };
   document.getElementById('whatsappBtn').onclick = function() {
-    window.open('https://wa.me/<%= agent.phone.replace(/\\D/g, '') %>');
+    const phone = '<%= agent.phone.replace(/\D/g, '') %>';
+    const msg   = encodeURIComponent('Hola, estoy interesado en la propiedad “<%= property.titulo %>”. ¿Podrías darme más detalles?');
+    window.open(`https://wa.me/${phone}?text=${msg}`);
   };
 
   const propiedadId = <%= property.id %>;
