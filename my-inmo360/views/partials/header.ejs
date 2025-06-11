@@ -146,7 +146,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let allNotifs = [];
 
-  // Renderiza las notificaciones en los dropdowns
   function renderDropdown() {
     const items = allNotifs.map(n =>
       `<li class="${n.is_read ? '' : 'unread'}" data-id="${n.id}">${n.message}</li>`
@@ -155,7 +154,6 @@ document.addEventListener('DOMContentLoaded', () => {
     notifDropM.innerHTML = items;
   }
 
-  // Actualiza el badge con el conteo de no leídas
   function updateBadge() {
     const count = allNotifs.filter(n => !n.is_read).length;
     if (count > 0) {
@@ -169,7 +167,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Carga las últimas 5 notificaciones
   function loadNotifs() {
     return fetch('/notifications')
       .then(res => res.json())
@@ -180,10 +177,9 @@ document.addEventListener('DOMContentLoaded', () => {
       });
   }
 
-  // Marca todas las notificaciones actuales como leídas
   function markAllRead() {
     const toMark = allNotifs.filter(n => !n.is_read).map(n => n.id);
-    if (toMark.length === 0) return Promise.resolve();
+    if (!toMark.length) return Promise.resolve();
     return Promise.all(toMark.map(id =>
       fetch(`/notifications/${id}/read`, { method: 'POST' })
     )).then(() => {
@@ -193,10 +189,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Inicializa
   loadNotifs();
 
-  // Al abrir la campana desktop
   notifBtn && notifBtn.addEventListener('click', e => {
     e.stopPropagation();
     markAllRead().then(() => {
@@ -204,7 +198,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // Al abrir la campana mobile
   notifBtnM && notifBtnM.addEventListener('click', e => {
     e.stopPropagation();
     markAllRead().then(() => {
@@ -212,13 +205,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // Cerrar dropdowns al hacer clic fuera
   document.addEventListener('click', () => {
     notifDrop.classList.add('hidden');
     notifDropM.classList.add('hidden');
   });
 
-  // Clic en notificación: sólo cierra, no navega
   [notifDrop, notifDropM].forEach(drop => {
     drop && drop.addEventListener('click', e => {
       const li = e.target.closest('li[data-id]');
