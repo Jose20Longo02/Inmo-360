@@ -51,9 +51,13 @@
 }
 
 /* Responsivo */
-@media (max-width: 900px) {
+@media (max-width: 1000px) {
   .properties-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .properties-header {
+    min-width: none;
   }
 }
 
