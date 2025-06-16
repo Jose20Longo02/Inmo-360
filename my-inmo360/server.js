@@ -156,58 +156,63 @@ const uploadS3 = multer({
 
 // Función para subir un buffer a Spaces usando s3v2, generando variantes WebP
 // Función actualizada para subir un buffer a Spaces usando s3v2
+// Función para subir un buffer a Spaces usando s3v2, generando variantes WebP
 async function processAndUploadToSpacesBuffer(buffer, originalName, userUuid, fieldName) {
   const ext = path.extname(originalName).toLowerCase();
   let finalBuffer = buffer;
-  let finalExt = ext;
-  // convertir HEIC a JPEG si aplica
+  let finalExt    = ext;
+
+  // 1) HEIC/HEIF → JPEG
   if (ext === '.heic' || ext === '.heif') {
     try {
       finalBuffer = await heicConvert({ buffer, format: 'JPEG', quality: 1 });
-      finalExt = '.jpg';
+      finalExt    = '.jpg';
     } catch (err) {
       console.error('Error conversión HEIC:', err);
     }
   }
 
-  const timestamp = Date.now();
-  let filenameBase;
-  if (fieldName === 'profilePic') filenameBase = `profile-${timestamp}`;
-  else if (fieldName === 'idFront') filenameBase = `idFront-${timestamp}`;
-  else if (fieldName === 'idBack')  filenameBase = `idBack-${timestamp}`;
-  else filenameBase = `${timestamp}`;
+  const timestamp    = Date.now();
+  const filenameBase = 
+    fieldName === 'profilePic' ? `profile-${timestamp}` :
+    fieldName === 'plano'      ? `plano-${timestamp}` :
+    `${timestamp}`;
 
   const bucket = process.env.SPACES_BUCKET;
   if (!bucket) throw new Error('SPACES_BUCKET no definido');
 
-  // 1) Sube la original
-  const keyOriginal = `usuarios/${userUuid}/${filenameBase}${finalExt}`;
+  // --- Subir original (con rotate para orientación correcta) ---
+  const keyOriginal = `propiedades/${userUuid}/${filenameBase}${finalExt}`;
   await s3v2.putObject({
     Bucket: bucket,
     Key: keyOriginal,
-    Body: finalBuffer,
+    Body: await sharp(finalBuffer)
+                .rotate()               // <-- corrige orientación EXIF
+                .toBuffer(),
     ACL: 'public-read',
     ContentType: `image/${finalExt.replace(/^\./,'')}`
   }).promise();
 
-  // 2) Genera y sube las versiones WebP a 300px y 600px
+  // --- Generar y subir WebP 300px y 600px (también con rotate) ---
   const widths = [300, 600];
   await Promise.all(widths.map(async w => {
-    const bufW = await sharp(finalBuffer)
+    const bufWebp = await sharp(finalBuffer)
+      .rotate()
       .resize({ width: w, withoutEnlargement: true })
       .toFormat('webp', { quality: 80 })
       .toBuffer();
-    const keyWebp = `usuarios/${userUuid}/${filenameBase}_${w}.webp`;
+
+    const keyWebp = `propiedades/${userUuid}/${filenameBase}_${w}.webp`;
     await s3v2.putObject({
       Bucket: bucket,
       Key: keyWebp,
-      Body: bufW,
+      Body: bufWebp,
       ACL: 'public-read',
       ContentType: 'image/webp'
     }).promise();
   }));
 
-  // 3) Devuelve la URL de la original para seguir utilizándola en tu app
+  // Devuelve la URL pública del original
   return `https://${bucket}.${process.env.SPACES_ENDPOINT}/${keyOriginal}`;
 }
 
@@ -2374,9 +2379,9 @@ function makeS3Key(prefixFolder, filename) {
 async function uploadBufferToSpaces(buffer, originalName, prefixFolder) {
   const ext = path.extname(originalName).toLowerCase();
   let finalBuffer = buffer;
-  let finalExt = ext;
+  let finalExt    = ext;
 
-  // 1) Si es HEIC/HEIF, convertir en memoria a JPEG
+  // Si es HEIC/HEIF, convertir en memoria a JPEG
   if (ext === '.heic' || ext === '.heif') {
     try {
       const outputBuffer = await heicConvert({
@@ -2385,22 +2390,26 @@ async function uploadBufferToSpaces(buffer, originalName, prefixFolder) {
         quality: 1
       });
       finalBuffer = outputBuffer;
-      finalExt = '.jpg';
+      finalExt    = '.jpg';
     } catch (convErr) {
       console.error('Error convirtiendo HEIC a JPEG:', convErr);
-      // seguimos con buffer y ext originales
+      // seguimos con buffer/ext original si falla
     }
   }
 
-  // 2) Construir la key para el archivo original
+  // Construir la key para el archivo original
   const key = makeS3Key(prefixFolder, path.basename(originalName, ext) + finalExt);
 
-  // 3) Subir el buffer convertido/original
+  // 1) Subir el original (aplicando rotate para corregir orientación)
   try {
+    const orientedBuffer = await sharp(finalBuffer)
+      .rotate() // corrige según EXIF
+      .toBuffer();
+
     await s3v2.putObject({
       Bucket: process.env.SPACES_BUCKET,
       Key: key,
-      Body: finalBuffer,
+      Body: orientedBuffer,
       ACL: 'public-read',
       ContentType:
         finalExt === '.jpg' || finalExt === '.jpeg'
@@ -2414,11 +2423,12 @@ async function uploadBufferToSpaces(buffer, originalName, prefixFolder) {
     throw new Error('Error al subir imagen a Spaces');
   }
 
-  // 4) Generar y subir versiones WebP en anchos 300px y 600px
+  // 2) Generar y subir versiones WebP en anchos 300px y 600px (también con rotate)
   const widths = [300, 600];
   for (const w of widths) {
     try {
       const bufWebp = await sharp(finalBuffer)
+        .rotate()
         .resize({ width: w, withoutEnlargement: true })
         .toFormat('webp', { quality: 80 })
         .toBuffer();
@@ -2436,7 +2446,7 @@ async function uploadBufferToSpaces(buffer, originalName, prefixFolder) {
     }
   }
 
-  // 5) Devolver la URL pública del original
+  // Devolver URL pública del original
   return `https://${process.env.SPACES_BUCKET}.${process.env.SPACES_ENDPOINT}/${key}`;
 }
 
