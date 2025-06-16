@@ -147,7 +147,7 @@
           <label><input type="checkbox" name="piscina_privada" value="true" <%= query.piscina_privada ? 'checked' : '' %>> Piscina Privada</label>
           <label><input type="checkbox" name="jacuzzi" value="true" <%= query.jacuzzi ? 'checked' : '' %>> Jacuzzi</label>
           <label><input type="checkbox" name="sauna_seco" value="true" <%= query.sauna_seco ? 'checked' : '' %>> Sauna Seco</label>
-          <label><input type="checkbox" name="sauna_vapor" value="true" <%= query.sauna_humedo ? 'checked' : '' %>> Sauna Húmedo</label>
+          <label><input type="checkbox" name="sauna_humedo" value="true" <%= query.sauna_humedo ? 'checked' : '' %>> Sauna Húmedo</label>
           <label><input type="checkbox" name="vistas_panoramicas" value="true" <%= query.vistas_panoramicas ? 'checked' : '' %>> Vistas Panorámicas</label>
           <label><input type="checkbox" name="cancha_futbol" value="true" <%= query.cancha_futbol ? 'checked' : '' %>> Cancha de fútbol</label>
           <label><input type="checkbox" name="cancha_basket" value="true" <%= query.cancha_basket ? 'checked' : '' %>> Cancha de basketball</label>
@@ -287,8 +287,8 @@
             <img
               src="<%= imageSrc %>"
               srcset="
-                <%= imageSrc.replace(/(\.\w+)$/, '_400$1') %> 400w,
-                <%= imageSrc.replace(/(\.\w+)$/, '_800$1') %> 800w,
+                <%= imageSrc.replace(/(\.\w+)$/, '_300.webp') %> 300w,
+                <%= imageSrc.replace(/(\.\w+)$/, '_600.webp') %> 600w,
                 <%= imageSrc %> 1200w
               "
               sizes="(max-width: 768px) 100vw, 300px"
