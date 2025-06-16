@@ -18,9 +18,9 @@
               <img
                 src="<%= url.replace(/(\.\w+)$/, '_400$1') %>"
                 srcset="
-                  <%= url.replace(/(\.\w+)$/, '_400$1') %> 400w,
-                  <%= url.replace(/(\.\w+)$/, '_800$1') %> 800w,
-                  <%= url %> 1200w
+                <%= imageSrc.replace(/(\.\w+)$/, '_300.webp') %> 300w,
+                <%= imageSrc.replace(/(\.\w+)$/, '_600.webp') %> 600w,
+                <%= imageSrc %> 1200w
                 "
                 sizes="(max-width: 768px) 100vw, 600px"
                 loading="lazy"
