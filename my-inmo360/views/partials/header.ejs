@@ -144,48 +144,55 @@ document.addEventListener('DOMContentLoaded', () => {
   const notifBadgeM  = document.getElementById('notif-badge-mobile');
   const notifDropM   = document.getElementById('notif-dropdown-mobile');
 
+  // Si no hay botón, salimos: nada que hacer
+  if (!notifBtn && !notifBtnM) return;
+
   let allNotifs = [];
 
   function renderDropdown() {
     const items = allNotifs.map(n =>
       `<li class="${n.is_read ? '' : 'unread'}" data-id="${n.id}">${n.message}</li>`
     ).join('');
-    notifDrop.innerHTML  = items;
-    notifDropM.innerHTML = items;
+    if (notifDrop)  notifDrop.innerHTML  = items;
+    if (notifDropM) notifDropM.innerHTML = items;
   }
 
   function updateBadge() {
     const count = allNotifs.filter(n => !n.is_read).length;
-    // Always show the badge with the count, even if it's 0
-    notifBadge.textContent  = count;
-    notifBadge.classList.remove('hidden');
-    notifBadgeM.textContent = count;
-    notifBadgeM.classList.remove('hidden');
+    // siempre mostramos la cuenta (incluso 0)
+    if (notifBadge) {
+      notifBadge.textContent = count;
+      notifBadge.classList.remove('hidden');
+    }
+    if (notifBadgeM) {
+      notifBadgeM.textContent = count;
+      notifBadgeM.classList.remove('hidden');
+    }
   }
 
   function loadNotifs() {
     return fetch('/notifications')
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error('Network response was not OK');
+        return res.json();
+      })
       .then(items => {
         allNotifs = items.slice(0, 5);
         renderDropdown();
         updateBadge();
+      })
+      .catch(err => {
+        console.error('No se pudieron cargar las notificaciones:', err);
       });
   }
 
   function markAllRead() {
     const toMark = allNotifs.filter(n => !n.is_read).map(n => n.id);
-    if (!toMark.length) {
-      // still clear badge to 0
-      allNotifs.forEach(n => n.is_read = true);
-      renderDropdown();
-      updateBadge();
-      return Promise.resolve();
-    }
-    // Optimistically mark as read
+    // marcamos en cliente de forma optimista
     allNotifs.forEach(n => n.is_read = true);
     renderDropdown();
     updateBadge();
+    if (!toMark.length) return Promise.resolve();
     return Promise.all(toMark.map(id =>
       fetch(`/notifications/${id}/read`, { method: 'POST' }).catch(console.error)
     ));
@@ -194,28 +201,33 @@ document.addEventListener('DOMContentLoaded', () => {
   loadNotifs();
 
   // Desktop bell
-  notifBtn && notifBtn.addEventListener('click', e => {
-    e.stopPropagation();
-    markAllRead().then(() => {
-      notifDrop.classList.toggle('hidden');
+  if (notifBtn) {
+    notifBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      markAllRead().then(() => {
+        notifDrop && notifDrop.classList.toggle('hidden');
+      });
     });
-  });
+  }
 
   // Mobile bell
-  notifBtnM && notifBtnM.addEventListener('click', e => {
-    e.stopPropagation();
-    markAllRead().then(() => {
-      notifDropM.classList.toggle('hidden');
+  if (notifBtnM) {
+    notifBtnM.addEventListener('click', e => {
+      e.stopPropagation();
+      markAllRead().then(() => {
+        notifDropM && notifDropM.classList.toggle('hidden');
+      });
     });
-  });
+  }
 
   document.addEventListener('click', () => {
-    notifDrop.classList.add('hidden');
-    notifDropM.classList.add('hidden');
+    notifDrop  && notifDrop.classList.add('hidden');
+    notifDropM && notifDropM.classList.add('hidden');
   });
 
   [notifDrop, notifDropM].forEach(drop => {
-    drop && drop.addEventListener('click', e => {
+    if (!drop) return;
+    drop.addEventListener('click', e => {
       const li = e.target.closest('li[data-id]');
       if (!li) return;
       drop.classList.add('hidden');
