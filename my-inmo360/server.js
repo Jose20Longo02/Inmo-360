@@ -29,6 +29,7 @@ const transporter = nodemailer.createTransport({
   }
 });
 
+
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 app.use(compression());
 
@@ -90,6 +91,30 @@ const s3v2 = new AWS.S3({
 });
 console.log('⛅ SPACES_BUCKET:', process.env.SPACES_BUCKET);
 console.log('⛅ SPACES_ENDPOINT:', process.env.SPACES_ENDPOINT);
+
+// Aplica la política de lectura pública una sola vez al arrancar:
+(async () => {
+  const policy = {
+    Version: "2012-10-17",
+    Statement: [{
+      Sid: "AllowPublicRead",
+      Effect: "Allow",
+      Principal: "*",
+      Action: ["s3:GetObject"],
+      Resource: [`arn:aws:s3:::${process.env.SPACES_BUCKET}/*`]
+    }]
+  };
+
+  try {
+    await s3v2.putBucketPolicy({
+      Bucket: process.env.SPACES_BUCKET,
+      Policy: JSON.stringify(policy)
+    }).promise();
+    console.log('✅ Política de bucket aplicada correctamente');
+  } catch (err) {
+    console.error('❌ Error aplicando política de bucket:', err);
+  }
+})();
 
 // Helper para generar key en Spaces
 function makeS3Key(prefixFolder, originalName) {
