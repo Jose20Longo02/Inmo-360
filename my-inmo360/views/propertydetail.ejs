@@ -18,9 +18,9 @@
               <img
                 src="<%= url.replace(/(\.\w+)$/, '_400$1') %>"
                 srcset="
-                <%= imageSrc.replace(/(\.\w+)$/, '_300.webp') %> 300w,
-                <%= imageSrc.replace(/(\.\w+)$/, '_600.webp') %> 600w,
-                <%= imageSrc %> 1200w
+                  <%= url.replace(/(\.\w+)$/, '_300.webp') %> 300w,
+                  <%= url.replace(/(\.\w+)$/, '_600.webp') %> 600w,
+                  <%= url %> 1200w
                 "
                 sizes="(max-width: 768px) 100vw, 600px"
                 loading="lazy"
@@ -28,6 +28,8 @@
               >
             </div>
           <% }) %>
+        </div>
+      <% } %>
         </div>
         <button class="slider-btn prev">&lt;</button>
         <button class="slider-btn next">&gt;</button>
